@@ -1,7 +1,9 @@
 package com.commons.android;
 
 import java.net.URLEncoder;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -20,11 +22,11 @@ public class DelayedGeocodeHandler extends Handler {
   
   private SingletonApplicationBase app;
   
-  private AutocompleteHelper helper;
+  private BasicAutocompleteHelper helper;
   
   private ProgressBar progressBar;
   
-  public DelayedGeocodeHandler( SingletonApplicationBase app, AutocompleteHelper helper, ProgressBar progressBar ) {
+  public DelayedGeocodeHandler( SingletonApplicationBase app, BasicAutocompleteHelper helper, ProgressBar progressBar ) {
     super();
     this.app = app;
     this.helper = helper;
@@ -43,32 +45,35 @@ public class DelayedGeocodeHandler extends Handler {
 
     Locale defaultLoc = Locale.getDefault();
     
+    Set<String> uniques = new HashSet<String>();
+    
+    long start = System.currentTimeMillis();
+    
     GoogleApiGeocodingTask() {}
 
     @Override
     protected JSONObject doInBackground( String... params ) {
       try{
         String addr = URLEncoder.encode( params[ 0 ], "UTF-8" );
-        ResponseTuple rt = app.doGet( "http://maps.google.com/maps/api/geocode/json?sensor=true&address=" + addr + "&language=" + defaultLoc.getLanguage(), 5000 );
+        ResponseTuple rt = app.doGet( "http://maps.google.com/maps/api/geocode/json?sensor=true&address=" + addr + "&language=" + defaultLoc.getLanguage(), 3000 );
         if( 200 == rt.getStatusCode() ) return rt.getJson();
       }catch( Exception e ){
         Log.e( "DelayedGeocodeHandler", "", e );
       }
-      
       return null;
     }
     
     @Override
     protected void onPostExecute( JSONObject json ) {
-      progressBar.setVisibility( View.GONE );
-      helper.initAdapter( true );
-      
-      if( null == json || !"OK".equals( json.optString( "status" ) ) ) return;
-        
       try{
+        if( null == json || !"OK".equals( json.optString( "status" ) ) ) return;
+        helper.initAdapter( true );
+        
         JSONArray array = json.getJSONArray( "results" ); 
         for( int ix = 0; ix < array.length(); ix++ ){
           JSONObject obj = array.optJSONObject( ix );
+          String addr = obj.getString( "formatted_address" );
+          if( !uniques.add( addr ) ) continue;
           JSONObject loc = obj.getJSONObject( "geometry" ).getJSONObject( "location" );
           Location l = new Location( "" );
           l.setLatitude( BaseUtils.FLOAT_FORMATTER.parse( loc.getString( "lat" ) ).doubleValue() );
@@ -82,10 +87,13 @@ public class DelayedGeocodeHandler extends Handler {
             else if( -1 != types.indexOf( "\"locality\"" ) ) city = comp.getString( "long_name" );
           }
           l.setProvider( null == city ? country : ( country + ";;" + city ) );
-          helper.add( l, obj.getString( "formatted_address" ) );
+          helper.add( l, addr );
         }
+        Log.i( "GoogleApiGeocodingTask", "got " + uniques + " results in " + ( System.currentTimeMillis() - start ) + " ms" );
       }catch( Exception e ){
         Log.e( "GoogleApiGeocodingTask", "", e );
+      }finally{
+        progressBar.setVisibility( View.GONE );
       }
     }
   }

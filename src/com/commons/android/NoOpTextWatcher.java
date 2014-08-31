@@ -5,9 +5,9 @@ import android.text.TextWatcher;
 
 public class NoOpTextWatcher implements TextWatcher {
 
-  private AutocompleteHelper autocompleteHelper;
+  private BasicAutocompleteHelper autocompleteHelper;
   
-  public NoOpTextWatcher( AutocompleteHelper autocompleteHelper ) {
+  public NoOpTextWatcher( BasicAutocompleteHelper autocompleteHelper ) {
     this.autocompleteHelper = autocompleteHelper;
   }
 

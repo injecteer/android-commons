@@ -201,6 +201,10 @@ public class BaseUtils {
     if( !isEmpty( val ) ) res.add( new BasicNameValuePair( key, val ) );
   }
 
+  public static String asString( Location loc ) {
+    return FLOAT_FORMATTER.format( loc.getLatitude() ) + "," + FLOAT_FORMATTER.format( loc.getLongitude() );
+  }
+
   public BaseUtils() {
     super();
   }

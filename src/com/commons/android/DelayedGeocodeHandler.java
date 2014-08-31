@@ -89,7 +89,7 @@ public class DelayedGeocodeHandler extends Handler {
           l.setProvider( null == city ? country : ( country + ";;" + city ) );
           helper.add( l, addr );
         }
-        Log.i( "GoogleApiGeocodingTask", "got " + uniques + " results in " + ( System.currentTimeMillis() - start ) + " ms" );
+//        Log.i( "GoogleApiGeocodingTask", "got " + uniques + " results in " + ( System.currentTimeMillis() - start ) + " ms" );
       }catch( Exception e ){
         Log.e( "GoogleApiGeocodingTask", "", e );
       }finally{

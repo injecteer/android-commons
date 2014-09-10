@@ -142,15 +142,20 @@ public class BaseUtils {
   public static Notification getNotification( Context ctx, Intent notificationIntent, TrayAttr trayAttr, long[] vibratePattern ) {
     NotificationCompat.Builder builder = new NotificationCompat.Builder( ctx );
     builder.setSmallIcon( trayAttr.icon )
+           .setPriority( NotificationCompat.PRIORITY_MAX )
            .setAutoCancel( true )
            .setOngoing( trayAttr.onGoing )
-           .setContentTitle( ctx.getString( trayAttr.title ) )
-           .setContentText( null == trayAttr.text ? ctx.getString( trayAttr.textId ) : trayAttr.text );
+           .setContentTitle( ctx.getString( trayAttr.title ) );
     
-    if( trayAttr.onGoing ) builder.setProgress( 0, 0, true );
-    else builder.setLights( 0xFFFFCC00, 1500, 800 )
-                .setSound( RingtoneManager.getDefaultUri( RingtoneManager.TYPE_NOTIFICATION ) )
-                .setVibrate( vibratePattern );
+    String txt = null == trayAttr.text ? ( 0 != trayAttr.textId ? ctx.getString( trayAttr.textId ) : null ) : trayAttr.text;
+    if( null != txt ) builder.setContentText( txt );
+    
+    if( trayAttr.onGoing ) 
+      builder.setProgress( 0, 0, true );
+    else 
+      builder.setLights( 0xFFFFCC00, 1500, 800 )
+             .setSound( RingtoneManager.getDefaultUri( RingtoneManager.TYPE_NOTIFICATION ) )
+             .setVibrate( vibratePattern );
     
     PendingIntent contentIntent = PendingIntent.getActivity( ctx, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT );
     builder.setContentIntent( contentIntent );

@@ -12,22 +12,19 @@ import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.protocol.HTTP;
 
 import android.app.Activity;
-import android.app.ActivityManager;
-import android.app.ActivityManager.RunningTaskInfo;
 import android.app.AlertDialog;
 import android.app.Application;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.http.AndroidHttpClient;
-import android.os.PowerManager;
 import android.preference.PreferenceManager;
 
 public abstract class SingletonApplicationBase extends Application {
 
+  public boolean isInBackground = false;
+  
   public int trayIcon;
   
   public int trayTextId;
@@ -85,23 +82,8 @@ public abstract class SingletonApplicationBase extends Application {
     return new ResponseTuple( hr.getStatusLine().getStatusCode(), BaseUtils.asString( hr ) );
   }
 
-  public boolean isInBackGround() {
-    PowerManager pm = (PowerManager)getSystemService( Context.POWER_SERVICE );
-    boolean isInBack = !pm.isScreenOn();
-    if( !isInBack ){
-      ActivityManager am = (ActivityManager)getSystemService( Context.ACTIVITY_SERVICE );
-      List<RunningTaskInfo> tasks = am.getRunningTasks( 1 );
-      if( !tasks.isEmpty() ){
-        ComponentName topActivity = tasks.get( 0 ).topActivity;
-        isInBack = !topActivity.getPackageName().equals( this.getPackageName() );
-      }
-    }
-  //    Log.w( this.getClass().getName(), "isInBackground: " + isInBack );
-    return isInBack;
-  }
-
   public boolean showNotification( Intent i, boolean force, int trayId, String fromTray, long[] vibratePattern ) {
-    if( !isInBackGround() && !force ) return false;
+    if( !isInBackground && !force ) return false;
     TrayAttr trayAttr = new TrayAttr( trayIcon, trayTitle, trayTextId );
     if( 0 != i.getIntExtra( "trayIcon", 0 ) ) trayAttr.icon = i.getIntExtra( "trayIcon", 0 );
     if( 0 != i.getIntExtra( "trayTitle", 0 ) ) trayAttr.title = i.getIntExtra( "trayTitle", 0 );
@@ -109,7 +91,7 @@ public abstract class SingletonApplicationBase extends Application {
     else if( 0 != i.getIntExtra( "trayText", 0 ) ) trayAttr.textId = i.getIntExtra( "trayText", 0 );
     trayAttr.onGoing = i.getBooleanExtra( "trayOnGoing", true );
     BaseUtils.showNotification( this, i, trayAttr, trayId, fromTray, vibratePattern );
-    return true; 
+    return true;
   }
 
   public void showAlertMsg( Activity act, int key ) {

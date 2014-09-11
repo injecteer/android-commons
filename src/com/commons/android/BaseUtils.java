@@ -195,7 +195,7 @@ public class BaseUtils {
 
   public static boolean isEmpty( String... ss ) {
     for( String s : ss ){
-      if( null == s || s.isEmpty() ) return true;
+      if( null == s || s.isEmpty() || "null".equals( s ) ) return true;
     }
     return false;
   }

@@ -140,6 +140,10 @@ public class BaseUtils {
   }
 
   public static Notification getNotification( Context ctx, Intent notificationIntent, TrayAttr trayAttr, long[] vibratePattern ) {
+    return getNotificationBuilder( ctx, notificationIntent, trayAttr, vibratePattern ).build();
+  }
+
+  public static NotificationCompat.Builder getNotificationBuilder( Context ctx, Intent notificationIntent, TrayAttr trayAttr, long[] vibratePattern ) {
     NotificationCompat.Builder builder = new NotificationCompat.Builder( ctx );
     builder.setSmallIcon( trayAttr.icon )
            .setPriority( NotificationCompat.PRIORITY_MAX )
@@ -159,7 +163,7 @@ public class BaseUtils {
     
     PendingIntent contentIntent = PendingIntent.getActivity( ctx, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT );
     builder.setContentIntent( contentIntent );
-    return builder.build();
+    return builder;
   }
 
   public static String[] convoluteStrings( String... strs ) {

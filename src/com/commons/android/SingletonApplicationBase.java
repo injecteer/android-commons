@@ -84,14 +84,19 @@ public abstract class SingletonApplicationBase extends Application {
 
   public boolean showNotification( Intent i, boolean force, int trayId, String fromTray, long[] vibratePattern ) {
     if( !isInBackground && !force ) return false;
+    TrayAttr trayAttr = prepareTrayAttr( i );
+    BaseUtils.showNotification( this, i, trayAttr, trayId, fromTray, vibratePattern );
+    return true;
+  }
+
+  public TrayAttr prepareTrayAttr( Intent i ) {
     TrayAttr trayAttr = new TrayAttr( trayIcon, trayTitle, trayTextId );
     if( 0 != i.getIntExtra( "trayIcon", 0 ) ) trayAttr.icon = i.getIntExtra( "trayIcon", 0 );
     if( 0 != i.getIntExtra( "trayTitle", 0 ) ) trayAttr.title = i.getIntExtra( "trayTitle", 0 );
     if( null != i.getStringExtra( "trayText" ) ) trayAttr.text = i.getStringExtra( "trayText" );
     else if( 0 != i.getIntExtra( "trayText", 0 ) ) trayAttr.textId = i.getIntExtra( "trayText", 0 );
     trayAttr.onGoing = i.getBooleanExtra( "trayOnGoing", true );
-    BaseUtils.showNotification( this, i, trayAttr, trayId, fromTray, vibratePattern );
-    return true;
+    return trayAttr;
   }
 
   public void showAlertMsg( Activity act, int key ) {

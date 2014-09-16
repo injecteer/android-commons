@@ -133,16 +133,16 @@ public class BaseUtils {
   public static void showNotification( Context ctx, Intent i, TrayAttr trayAttr, int trayId, String fromTray, long[] vibratePattern ) {
     NotificationManager nm = (NotificationManager)ctx.getSystemService( Context.NOTIFICATION_SERVICE );
     nm.cancel( trayId );
-    i.putExtra( fromTray, true );
-    Notification notification = getNotification( ctx, i, trayAttr, vibratePattern );
+    Notification notification = getNotification( ctx, i, trayAttr, fromTray, vibratePattern );
     nm.notify( trayId, notification );
   }
 
-  public static Notification getNotification( Context ctx, Intent notificationIntent, TrayAttr trayAttr, long[] vibratePattern ) {
-    return getNotificationBuilder( ctx, notificationIntent, trayAttr, vibratePattern ).build();
+  public static Notification getNotification( Context ctx, Intent notificationIntent, TrayAttr trayAttr, String fromTray, long[] vibratePattern ) {
+    return getNotificationBuilder( ctx, notificationIntent, trayAttr, fromTray, vibratePattern ).build();
   }
 
-  public static NotificationCompat.Builder getNotificationBuilder( Context ctx, Intent notificationIntent, TrayAttr trayAttr, long[] vibratePattern ) {
+  public static NotificationCompat.Builder getNotificationBuilder( Context ctx, Intent notificationIntent, TrayAttr trayAttr, String fromTray, long[] vibratePattern ) {
+    notificationIntent.putExtra( fromTray, true );
     NotificationCompat.Builder builder = new NotificationCompat.Builder( ctx );
     builder.setSmallIcon( trayAttr.icon )
            .setPriority( NotificationCompat.PRIORITY_MAX )

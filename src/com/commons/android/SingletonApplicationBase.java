@@ -93,8 +93,8 @@ public abstract class SingletonApplicationBase extends Application {
     TrayAttr trayAttr = new TrayAttr( trayIcon, trayTitle, trayTextId );
     if( 0 != i.getIntExtra( "trayIcon", 0 ) ) trayAttr.icon = i.getIntExtra( "trayIcon", 0 );
     if( 0 != i.getIntExtra( "trayTitle", 0 ) ) trayAttr.title = i.getIntExtra( "trayTitle", 0 );
-    if( null != i.getStringExtra( "trayText" ) ) trayAttr.text = i.getStringExtra( "trayText" );
-    else if( 0 != i.getIntExtra( "trayText", 0 ) ) trayAttr.textId = i.getIntExtra( "trayText", 0 );
+    if( !BaseUtils.isEmpty( i.getStringExtra( "trayText" ) ) ) trayAttr.text = i.getStringExtra( "trayText" );
+    else if( 0 != i.getIntExtra( "trayTextId", 0 ) ) trayAttr.textId = i.getIntExtra( "trayTextId", 0 );
     trayAttr.onGoing = i.getBooleanExtra( "trayOnGoing", true );
     return trayAttr;
   }

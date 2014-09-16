@@ -2,15 +2,15 @@ package com.commons.android;
 
 public class TrayAttr {
 
-  public int icon;
+  public int icon = 0;
   
-  public int title;
+  public int title = 0;
   
   public String text;
   
+  public int textId = 0;
+  
   public boolean onGoing = true;
-
-  public int textId;
 
   public TrayAttr( int icon, int title, int textId ) {
     this.icon = icon;

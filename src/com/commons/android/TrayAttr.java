@@ -10,12 +10,24 @@ public class TrayAttr {
   
   public int textId = 0;
   
-  public boolean onGoing = true;
+  public boolean onGoing = false;
+  
+  public boolean sound = true;
 
+  public TrayAttr( int icon ) {
+    this.icon = icon;
+  }
+  
   public TrayAttr( int icon, int title, int textId ) {
     this.icon = icon;
     this.title = title;
     this.textId = textId;
+  }
+  
+  public TrayAttr( int icon, int title, String text ) {
+    this.icon = icon;
+    this.title = title;
+    this.text = text;
   }
   
 }

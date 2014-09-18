@@ -28,6 +28,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
+import android.media.RingtoneManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Base64;
 import android.util.Log;
@@ -155,10 +156,12 @@ public class BaseUtils {
     
     if( trayAttr.onGoing ) 
       builder.setProgress( 0, 0, true );
-    else 
-      builder.setLights( 0xFFFFCC00, 1500, 800 )
-//             .setSound( RingtoneManager.getDefaultUri( RingtoneManager.TYPE_NOTIFICATION ) )
-             .setVibrate( vibratePattern );
+    else{ 
+      builder.setLights( 0xFFFFCC00, 1500, 800 );
+      if( trayAttr.sound )
+        builder//.setSound( RingtoneManager.getDefaultUri( RingtoneManager.TYPE_NOTIFICATION ) )
+               .setVibrate( vibratePattern );
+    }
     
     PendingIntent contentIntent = PendingIntent.getActivity( ctx, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT );
     builder.setContentIntent( contentIntent );

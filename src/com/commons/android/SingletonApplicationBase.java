@@ -25,12 +25,6 @@ public abstract class SingletonApplicationBase extends Application {
 
   public boolean isInBackground = false;
   
-  public int trayIcon;
-  
-  public int trayTextId;
-  
-  public int trayTitle;
-  
   public String email;
   
   public String authToken;
@@ -82,21 +76,10 @@ public abstract class SingletonApplicationBase extends Application {
     return new ResponseTuple( hr.getStatusLine().getStatusCode(), BaseUtils.asString( hr ) );
   }
 
-  public boolean showNotification( Intent i, boolean force, int trayId, String fromTray, long[] vibratePattern ) {
+  public boolean showNotification( Intent i, TrayAttr trayAttr, boolean force, int trayId, String fromTray, long[] vibratePattern ) {
     if( !isInBackground && !force ) return false;
-    TrayAttr trayAttr = prepareTrayAttr( i );
     BaseUtils.showNotification( this, i, trayAttr, trayId, fromTray, vibratePattern );
     return true;
-  }
-
-  public TrayAttr prepareTrayAttr( Intent i ) {
-    TrayAttr trayAttr = new TrayAttr( trayIcon, trayTitle, trayTextId );
-    if( 0 != i.getIntExtra( "trayIcon", 0 ) ) trayAttr.icon = i.getIntExtra( "trayIcon", 0 );
-    if( 0 != i.getIntExtra( "trayTitle", 0 ) ) trayAttr.title = i.getIntExtra( "trayTitle", 0 );
-    if( !BaseUtils.isEmpty( i.getStringExtra( "trayText" ) ) ) trayAttr.text = i.getStringExtra( "trayText" );
-    else if( 0 != i.getIntExtra( "trayTextId", 0 ) ) trayAttr.textId = i.getIntExtra( "trayTextId", 0 );
-    trayAttr.onGoing = i.getBooleanExtra( "trayOnGoing", true );
-    return trayAttr;
   }
 
   public void showAlertMsg( Activity act, int key ) {

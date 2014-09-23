@@ -159,7 +159,7 @@ public class BaseUtils {
     else{ 
       builder.setLights( 0xFFFFCC00, 1500, 800 );
       if( trayAttr.sound )
-        builder.setSound( RingtoneManager.getDefaultUri( RingtoneManager.TYPE_NOTIFICATION ) )
+        builder//.setSound( RingtoneManager.getDefaultUri( RingtoneManager.TYPE_NOTIFICATION ) )
                .setVibrate( vibratePattern );
     }
     

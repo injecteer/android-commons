@@ -16,6 +16,7 @@ import android.app.AlertDialog;
 import android.app.Application;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.http.AndroidHttpClient;
@@ -41,6 +42,10 @@ public abstract class SingletonApplicationBase extends Application {
   public void onCreate() {
     super.onCreate();
     try{ Class.forName( "android.os.AsyncTask" ); }catch( ClassNotFoundException e ){}
+    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences( this );
+    email = prefs.getString( "accountName", "" );
+    authToken = prefs.getString( "authToken", null );
+    fullName = prefs.getString( "fullName", null );
   }
   
   public String getId() {
@@ -122,7 +127,6 @@ public abstract class SingletonApplicationBase extends Application {
           .remove( "authType" )
           .remove( "authToken" )
           .remove( "fullName" )
-          .remove( "carInfo" )
           .remove( "avatar" )
           .commit();
     authToken = null;

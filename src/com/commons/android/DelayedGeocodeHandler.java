@@ -79,14 +79,13 @@ public class DelayedGeocodeHandler extends Handler {
           l.setLatitude( BaseUtils.FLOAT_FORMATTER.parse( loc.getString( "lat" ) ).doubleValue() );
           l.setLongitude( BaseUtils.FLOAT_FORMATTER.parse( loc.getString( "lng" ) ).doubleValue() ); 
           JSONArray components = obj.getJSONArray( "address_components" );
-          String country = null, city = null;
+          String country = null;
           for( int ixx = 0; ixx < components.length(); ixx++ ){
             JSONObject comp = (JSONObject)components.get( ixx );
             String types = comp.getString( "types" );
             if( -1 != types.indexOf( "\"country\"" ) ) country = comp.getString( "short_name" );
-            else if( -1 != types.indexOf( "\"locality\"" ) ) city = comp.getString( "long_name" );
           }
-          l.setProvider( null == city ? country : ( country + ";;" + city ) );
+          l.setProvider( country );
           helper.add( l, addr );
         }
 //        Log.i( "GoogleApiGeocodingTask", "got " + uniques + " results in " + ( System.currentTimeMillis() - start ) + " ms" );

@@ -16,8 +16,17 @@ public class LocationTuple {
   @Override
   public String toString() { return name; }
   
+  public void setLocation( Location location ) { this.location = location;  }
+  
   public Location getLocation() { return location; }
   
+  public void setName( String name ) { this.name = name; }
+  
   public String getName() { return name; }
+ 
+  public void clear() {
+    name = "";
+    location = null;
+  }
   
 }

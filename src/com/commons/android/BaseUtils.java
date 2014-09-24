@@ -28,12 +28,13 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
-import android.media.RingtoneManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Base64;
 import android.util.Log;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+
+import com.google.android.gms.maps.model.LatLng;
 
 public class BaseUtils {
 
@@ -218,6 +219,17 @@ public class BaseUtils {
 
   public BaseUtils() {
     super();
+  }
+
+  public static LatLng toLatLng( Location loc ) {
+    return new LatLng( loc.getLatitude(), loc.getLongitude() );
+  }
+  
+  public static Location toLocation( LatLng loc ) {
+    Location l = new Location( "" );
+    l.setLatitude( loc.latitude );
+    l.setLongitude( loc.longitude );
+    return l;
   }
 
 }

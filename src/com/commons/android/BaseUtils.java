@@ -195,6 +195,17 @@ public class BaseUtils {
     return res;
   }
 
+  public static String halfLinebreak( String v ) {
+    StringBuilder sb = new StringBuilder();
+    int mid = v.length() >> 1;
+    for( String s:v.split( ", " ) ){
+      int lenBefore = sb.length();
+      sb.append( s ).append( ", " );
+      if( lenBefore < mid && sb.length() >= mid ) sb.append( "\n" );
+    }
+    return sb.toString();
+  }
+  
   public static Bitmap base64toBitmap( String s ) {
     byte[] avatar = Base64.decode( s, Base64.DEFAULT );
     return BitmapFactory.decodeByteArray( avatar, 0, avatar.length );

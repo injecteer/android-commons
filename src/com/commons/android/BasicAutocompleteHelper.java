@@ -1,0 +1,333 @@
+package com.commons.android;
+
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.graphics.drawable.Drawable;
+import android.location.Location;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.View.OnTouchListener;
+import android.view.ViewTreeObserver.OnGlobalLayoutListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.EditText;
+import android.widget.ProgressBar;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
+import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
+import com.google.android.gms.location.LocationClient;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.GoogleMap.InfoWindowAdapter;
+import com.google.android.gms.maps.GoogleMap.OnInfoWindowClickListener;
+import com.google.android.gms.maps.GoogleMap.OnMapClickListener;
+import com.google.android.gms.maps.MapView;
+import com.google.android.gms.maps.MapsInitializer;
+import com.google.android.gms.maps.UiSettings;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, OnItemClickListener, ConnectionCallbacks, OnConnectionFailedListener {
+
+  private static final int TEXT_WATCHER_SET_ID = 550555271;
+  
+  public static final int THRESHOLD = 2;
+  
+  protected Activity ctx;
+  
+  protected final SingletonApplicationBase app;
+  
+  public AutoCompleteTextView input;
+  
+  protected ArrayAdapter<LocationTuple> autocompleteAdapter;
+  
+  private LocationTuple locationTuple = new LocationTuple( null, "" );
+  
+  protected Drawable iconTextClear;
+  
+  public ProgressBar autoCompleteProgressBar;
+  
+  protected Handler delayedHandler;
+  
+  protected final TextWatcher NO_OP_TEXTWATCHER;
+  
+  private boolean fireOnlyOnAdd = true;
+  
+  public MapView mapView;
+  
+  protected GoogleMap map;
+
+  private LocationClient locationClient;
+
+  public BasicAutocompleteHelper( SingletonApplicationBase app, Activity activity, int containerId, int clearIconId, int autocompleteId, int progressBarId ) {
+    this( app, activity, containerId, 0, clearIconId, autocompleteId, progressBarId );
+  }
+  
+  public BasicAutocompleteHelper( SingletonApplicationBase app, Activity activity, int containerId, int includeId, int clearIconId, int autocompleteId, int progressBarId ) {
+    this.app = app;
+    this.ctx = activity;
+    
+    iconTextClear = ctx.getResources().getDrawable( clearIconId );
+    iconTextClear.setBounds( 0, 0, iconTextClear.getIntrinsicWidth(), iconTextClear.getIntrinsicHeight() );
+    
+    View container = 0 == includeId ? ctx.findViewById( containerId ) : ctx.findViewById( includeId ).findViewById( containerId );
+    
+    input = (AutoCompleteTextView)container.findViewById( autocompleteId );
+    input.setText( "" );
+    input.setOnItemClickListener( this );
+    input.setOnTouchListener( this );
+    input.setCompoundDrawablePadding( 0 );
+    setClearIconVisible( false );
+    
+    NO_OP_TEXTWATCHER = new NoOpTextWatcher( this );
+    
+    autoCompleteProgressBar = (ProgressBar)container.findViewById( progressBarId );
+    
+    delayedHandler = new DelayedGeocodeHandler( app, this, autoCompleteProgressBar );
+  }
+
+  public void initMap( int mapId, final int markerId ) {
+    initMap( mapId, markerId, null );
+  }
+  
+  public void initMap( int mapId, final int markerId, InfoWindowAdapter infoWindowAdapter ) {
+    MapsInitializer.initialize( ctx );
+    
+    mapView = (MapView)ctx.findViewById( mapId );
+    mapView.onCreate( null );
+    map = mapView.getMap();
+    if( null != infoWindowAdapter ) map.setInfoWindowAdapter( infoWindowAdapter );
+    map.setOnInfoWindowClickListener( new OnInfoWindowClickListener() {
+      @Override public void onInfoWindowClick( Marker m ) {
+        if( "...".equals( m.getTitle() ) ) return;
+        closeMap();
+        setClearIconVisible( true );
+        removeTextWatcher();
+        setTargetString( locationTuple.getName() );
+      }
+    } );
+    map.setOnMapClickListener( new OnMapClickListener() {
+      @Override public void onMapClick( final LatLng loc ) {
+        map.clear();
+        locationTuple.setLocation( BaseUtils.toLocation( loc ) );
+        locationTuple.setName( null );
+        final MarkerOptions mo = new MarkerOptions()
+          .icon( BitmapDescriptorFactory.fromResource( markerId ) )
+          .position( loc )
+          .anchor( 0.5f, 1f )
+          .title( "..." );
+        map.addMarker( mo ).showInfoWindow();
+        
+        new GoogleApiReverseGeocodingTask( app, locationTuple, new Runnable() {
+          @Override public void run() {
+            map.clear();
+            String n = locationTuple.getName();
+            if( !BaseUtils.isEmpty( n ) ){
+              if( 22 > n.length() ) n = BaseUtils.halfLinebreak( n ); 
+              mo.title( n );
+              map.addMarker( mo ).showInfoWindow();
+            }
+          }
+        } ).execute();
+      }
+    } );
+    UiSettings uiSettings = map.getUiSettings();
+    uiSettings.setZoomControlsEnabled( true );
+    uiSettings.setMyLocationButtonEnabled( true );
+    
+    locationClient = new LocationClient( ctx, this, this ); 
+    locationClient.connect();
+  }
+  
+  private void openMap() {
+    if( null == mapView ) return;
+    clear();
+    ((ActionBarOps)ctx).hideActionBar();
+    map.setMyLocationEnabled( true );
+    mapView.setVisibility( View.VISIBLE );
+    map.clear();
+  }
+  
+  public void closeMap() {
+    if( null == mapView ) return;
+    map.setMyLocationEnabled( false );
+    mapView.setVisibility( View.GONE );
+    ((ActionBarOps)ctx).showActionBar();
+  }
+  
+  public void onResume(){
+    if( null != mapView ) mapView.onResume();
+  }
+
+  public void onPause() {
+    if( null != mapView ) mapView.onPause();
+  }
+  
+  public boolean isMapShowing() { return View.VISIBLE == mapView.getVisibility(); }
+  
+  @Override
+  public void onTextChanged( CharSequence txt, int start, int before, int count ) {
+    String text = txt.toString().trim();
+    delayedHandler.removeMessages( DelayedGeocodeHandler.MESSAGE_TEXT_CHANGED );
+    if( BaseUtils.isEmpty( text ) ){
+      fireOnlyOnAdd = true;
+      locationTuple = new LocationTuple( null, null );
+    }else{
+      setClearIconVisible( true );
+      if( text.length() >= THRESHOLD && ( !fireOnlyOnAdd || count > before ) && !text.equals( locationTuple.getName() ) ){
+        Message msg = Message.obtain( delayedHandler, DelayedGeocodeHandler.MESSAGE_TEXT_CHANGED, text );
+        delayedHandler.sendMessageDelayed( msg, 500 );
+      }
+    }
+  }
+
+  @SuppressLint("ClickableViewAccessibility")
+  @Override
+  public boolean onTouch( View v, MotionEvent event ) {
+    EditText vv = (EditText)v;
+    if( MotionEvent.ACTION_UP != event.getAction() ) return false;
+    if( BaseUtils.isEmpty( vv.getText().toString().trim() ) )
+      showPreSuggestions();
+    else if( null != vv.getCompoundDrawables()[ 2 ] ){
+      boolean tappedX = event.getX() > ( vv.getWidth() - vv.getPaddingRight() - iconTextClear.getIntrinsicWidth() );
+      if( tappedX ){ 
+        vv.setText( "" );
+        locationTuple.clear();
+        fireOnlyOnAdd = true;
+        setClearIconVisible( false );
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public void onItemClick( AdapterView<?> parent, View view, int position, long id ) {
+    removeTextWatcher();
+    autoCompleteProgressBar.setVisibility( View.GONE );
+    LocationTuple lt = autocompleteAdapter.getItem( position );
+    if( null != lt.getLocation() )
+      locationTuple = lt;
+    else
+      openMap();
+  }
+  
+  protected void pan( final CameraUpdate upd ) {
+    try{
+      map.moveCamera( upd );
+    }catch( IllegalStateException e ){
+      // layout not yet initialized
+      if( mapView.getViewTreeObserver().isAlive() )
+        mapView.getViewTreeObserver().addOnGlobalLayoutListener( new OnGlobalLayoutListener() {
+          @SuppressWarnings("deprecation") @SuppressLint("NewApi") @Override
+          public void onGlobalLayout() {
+            if( Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN )
+              mapView.getViewTreeObserver().removeGlobalOnLayoutListener( this );
+            else
+              mapView.getViewTreeObserver().removeOnGlobalLayoutListener( this );
+            map.moveCamera( upd );
+          } 
+        });
+    }
+  }
+
+  @Override public void afterTextChanged( Editable txt ) {}
+  @Override public void beforeTextChanged( CharSequence arg0, int arg1, int arg2, int arg3 ) {}
+
+  public void setClearIconVisible( boolean visible ) {
+    input.setCompoundDrawables( null, null, visible ? iconTextClear : null, null );
+  }
+
+  public void checkTextWatcher() {
+    if( null != input.getTag( TEXT_WATCHER_SET_ID ) ) return;
+    input.removeTextChangedListener( NO_OP_TEXTWATCHER );
+    input.addTextChangedListener( this );
+    input.setTag( TEXT_WATCHER_SET_ID, "notnull" );
+  }
+
+  public void removeTextWatcher() {
+    BaseUtils.hideKeyboard( ctx, input );
+    delayedHandler.removeMessages( DelayedGeocodeHandler.MESSAGE_TEXT_CHANGED );
+    input.removeTextChangedListener( this );
+    input.addTextChangedListener( NO_OP_TEXTWATCHER );
+    input.setTag( TEXT_WATCHER_SET_ID, null );
+  }
+
+  protected void showPreSuggestions() {
+    autocompleteAdapter.notifyDataSetChanged();
+    input.setAdapter( autocompleteAdapter );
+    input.showDropDown();
+  }
+
+  public void add( Location loc, String name ) {
+    autocompleteAdapter.add( new LocationTuple( loc, name ) );
+    autocompleteAdapter.notifyDataSetChanged();
+  }
+
+  public void initAdapter( boolean assignToInput ) {
+    autocompleteAdapter = new ArrayAdapter<LocationTuple>( ctx, android.R.layout.simple_dropdown_item_1line );
+    autocompleteAdapter.setNotifyOnChange( true );
+    if( assignToInput ) input.setAdapter( autocompleteAdapter );
+  }
+  
+  public Location getTarget() { return locationTuple.getLocation(); }
+
+  public void setTarget( Location target ) {
+    locationTuple.setLocation( target );
+  }
+
+  public String getTargetString() { return locationTuple.getName(); }
+
+  public void enable() {
+    input.setEnabled( true );
+    checkTextWatcher();
+  }
+
+  public void disable() {
+    input.setEnabled( false );
+  }
+
+  public void setTargetString( String v ) {
+    fireOnlyOnAdd = false;
+    locationTuple.setName( v );
+    input.setText( v );
+  }
+  
+  public void setLocationTuple( LocationTuple locationTuple ) {
+    this.locationTuple = locationTuple;
+    setTargetString( locationTuple.getName() );
+  }
+
+  public LocationTuple getLocationTuple() {
+    return locationTuple;
+  }
+  
+  public void clear() {
+    locationTuple.clear();
+    input.setText( "" );
+    setClearIconVisible( false );
+  }
+
+  @Override
+  public void onConnected( Bundle arg0 ) {
+    Location loc = locationClient.getLastLocation();
+    LatLng ll = new LatLng( 48.155, 11.5418 );
+    if( null != loc ) ll = BaseUtils.toLatLng( loc );
+    pan( CameraUpdateFactory.newLatLngZoom( ll, 11 ) );
+  }
+
+  @Override public void onDisconnected() {}
+  @Override public void onConnectionFailed( ConnectionResult arg0 ) {}
+
+}

@@ -227,6 +227,10 @@ public class BaseUtils {
   public static String asString( Location loc ) {
     return FLOAT_FORMATTER.format( loc.getLatitude() ) + "," + FLOAT_FORMATTER.format( loc.getLongitude() );
   }
+  
+  public static String asString( LatLng loc ) {
+    return FLOAT_FORMATTER.format( loc.latitude ) + "," + FLOAT_FORMATTER.format( loc.longitude );
+  }
 
   public BaseUtils() {
     super();

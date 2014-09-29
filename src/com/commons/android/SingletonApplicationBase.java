@@ -11,6 +11,8 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.protocol.HTTP;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
@@ -38,15 +40,27 @@ public abstract class SingletonApplicationBase extends Application {
 
   public boolean loggedIn = false;
 
+  public SharedPreferences prefs;
+
   @Override
   public void onCreate() {
     super.onCreate();
     try{ Class.forName( "android.os.AsyncTask" ); }catch( ClassNotFoundException e ){}
-    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences( this );
-    email = prefs.getString( "accountName", "" );
-    authToken = prefs.getString( "authToken", null );
-    fullName = prefs.getString( "fullName", null );
+    prefs = PreferenceManager.getDefaultSharedPreferences( this );
+    restoreUserData();
   }
+  
+  public void restoreUserData() {
+    if( null == authToken ){
+      email = prefs.getString( "accountName", "" );
+      authToken = prefs.getString( "authToken", null );
+      fullName = prefs.getString( "fullName", null );
+    }
+    if( BaseUtils.isEmpty( email ) ){
+      Account[] googleAccs = AccountManager.get( this ).getAccountsByType( "com.google" );
+      if( 0 != googleAccs.length ) email = googleAccs[ 0 ].name;
+    }
+  }  
   
   public String getId() {
     return null == authToken ? email : authToken;

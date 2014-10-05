@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.Currency;
 import java.util.HashMap;
 import java.util.List;
@@ -230,6 +231,20 @@ public class BaseUtils {
   
   public static String asString( LatLng loc ) {
     return FLOAT_FORMATTER.format( loc.latitude ) + "," + FLOAT_FORMATTER.format( loc.longitude );
+  }
+  
+  public static Location locationFromString( String s ) {
+    if( isEmpty( s ) ) return null;
+    String[] split = s.split( "," );
+    if( 2 > split.length ) return null;
+    Location loc = new Location( "" );
+    try{
+      loc.setLatitude( (double)FLOAT_FORMATTER.parse( split[ 0 ] ) );
+      loc.setLongitude( (double)FLOAT_FORMATTER.parse( split[ 1 ] ) );
+      return loc;
+    }catch( ParseException e ){
+    }
+    return null;
   }
 
   public BaseUtils() {

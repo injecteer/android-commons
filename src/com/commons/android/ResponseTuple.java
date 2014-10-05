@@ -1,5 +1,6 @@
 package com.commons.android;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -24,6 +25,10 @@ public class ResponseTuple {
   
   public JSONObject getJson() throws JSONException {
     return new JSONObject( body );
+  }
+  
+  public JSONArray getJsonArray() throws JSONException {
+    return new JSONArray( body );
   }
   
 }

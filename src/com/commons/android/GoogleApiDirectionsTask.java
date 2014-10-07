@@ -1,7 +1,5 @@
 package com.commons.android;
 
-import static com.commons.android.BaseUtils.FLOAT_FORMATTER;
-
 import java.util.List;
 
 import org.json.JSONObject;
@@ -33,11 +31,24 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
 
   @Override
   protected JSONObject doInBackground( Location... params ) {
+    String url = "http://maps.googleapis.com/maps/api/directions/json?sensor=true&";
+    String origin = null, dest = null;
     try{
-      String origin = asString( params[0] );
-      String via = asString( params[1] );
-      String dest = asString( params[2] );
-      String url = "http://maps.googleapis.com/maps/api/directions/json?sensor=true&origin=" + origin + "&destination=" + dest + "&waypoints=" + via;
+      switch( params.length ){
+        case 2:
+          origin = BaseUtils.asString( params[ 0 ] );
+          dest = BaseUtils.asString( params[ 1 ] );
+          url += "&origin=" + origin + "&destination=" + dest;
+          break;
+        case 3:
+          origin = BaseUtils.asString( params[ 0 ] );
+          String via = BaseUtils.asString( params[ 1 ] );
+          dest = BaseUtils.asString( params[ 2 ] );
+          url += "&origin=" + origin + "&destination=" + dest + "&waypoints=" + via;
+          break;
+        default:
+          return null;
+      }
       Log.i( "DirectionsProvider", "url " + url );
       ResponseTuple rt = app.doGet( url, 4000 );
       if( 200 == rt.getStatusCode() ) return rt.getJson();
@@ -49,6 +60,7 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
 
   @Override
   protected void onPostExecute( JSONObject json ) {
+    if( null == json ) return;
     try{
       if( "OK".equals( json.optString( "status" ) ) ){
         if( 1 < decodePoly( json.getJSONArray( "routes" ).getJSONObject( 0 ).getJSONObject( "overview_polyline" ).getString( "points" ) ) )
@@ -90,8 +102,4 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
     return points.size();
   }
   
-  String asString( Location loc ) {
-    return FLOAT_FORMATTER.format( loc.getLatitude() ) + "," + FLOAT_FORMATTER.format( loc.getLongitude() );
-  }
-
 }

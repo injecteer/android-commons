@@ -144,7 +144,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
       }
     } );
     UiSettings uiSettings = map.getUiSettings();
-    uiSettings.setZoomControlsEnabled( true );
+    uiSettings.setZoomControlsEnabled( false );
     uiSettings.setMyLocationButtonEnabled( true );
     
     locationClient = new LocationClient( ctx, this, this ); 
@@ -265,6 +265,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   }
 
   protected void showPreSuggestions() {
+    if( null == autocompleteAdapter ) return;
     autocompleteAdapter.notifyDataSetChanged();
     input.setAdapter( autocompleteAdapter );
     input.showDropDown();

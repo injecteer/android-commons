@@ -204,7 +204,8 @@ public class BaseUtils {
       sb.append( s ).append( ", " );
       if( lenBefore < mid && sb.length() >= mid ) sb.append( "\n" );
     }
-    return sb.toString();
+    String res = sb.toString().trim();
+    return res.endsWith( "," ) ? res.substring( 0, res.length() - 1 ) : res;
   }
   
   public static Bitmap base64toBitmap( String s ) {

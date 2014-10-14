@@ -25,8 +25,8 @@ public class LocationTuple {
   public String getName() { return name; }
  
   public void clear() {
-    name = "";
     location = null;
+    name = "";
   }
   
 }

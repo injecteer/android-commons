@@ -53,9 +53,11 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   
   protected ArrayAdapter<LocationTuple> autocompleteAdapter;
   
-  private LocationTuple locationTuple = new LocationTuple( null, "" );
+  protected LocationTuple locationTuple = new LocationTuple( null, "" );
   
   protected Drawable iconTextClear;
+  
+  protected OnClearListener onClearListener = null;
   
   public ProgressBar autoCompleteProgressBar;
   
@@ -175,7 +177,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     if( null != mapView ) mapView.onPause();
   }
   
-  public boolean isMapShowing() { return View.VISIBLE == mapView.getVisibility(); }
+  public boolean isMapShowing() { return null != mapView && View.VISIBLE == mapView.getVisibility(); }
   
   @Override
   public void onTextChanged( CharSequence txt, int start, int before, int count ) {
@@ -202,11 +204,12 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
       showPreSuggestions();
     else if( null != vv.getCompoundDrawables()[ 2 ] ){
       boolean tappedX = event.getX() > ( vv.getWidth() - vv.getPaddingRight() - iconTextClear.getIntrinsicWidth() );
-      if( tappedX ){ 
+      if( tappedX ){
         vv.setText( "" );
         locationTuple.clear();
         fireOnlyOnAdd = true;
         setClearIconVisible( false );
+        if( null != onClearListener ) return onClearListener.onClear( input );
       }
     }
     return false;
@@ -330,5 +333,8 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
 
   @Override public void onDisconnected() {}
   @Override public void onConnectionFailed( ConnectionResult arg0 ) {}
-
+  
+  public interface OnClearListener {
+    public boolean onClear( AutoCompleteTextView input );
+  }
 }

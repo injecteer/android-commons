@@ -1,6 +1,7 @@
 package com.commons.android;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -14,13 +15,21 @@ public class BoundedLocations {
     positions.add( pos );
   }
   
+  public void addAll( Collection<LatLng> col ){
+    positions.addAll( col );
+  }
+  
+  public int size() {
+    return positions.size();
+  }
+  
   public LatLngBounds getBounds() {
     return getBounds( positions.size() );
   }
   
   public LatLngBounds getBounds( int to ) {
     double swLat = 90, swLng = 180, neLat = -90, neLng = -180;
-    for( int ix = 0; ix < Math.min( to + 1, positions.size() ); ix++ ){
+    for( int ix = 0; ix < Math.min( to, positions.size() ); ix++ ){
       LatLng ll = positions.get( ix );
       swLat = Math.min( swLat, ll.latitude );
       swLng = Math.min( swLng, ll.longitude );

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 
@@ -12,11 +14,11 @@ public class BoundedLocations {
   private List<LatLng> positions = new ArrayList<LatLng>();
   
   public void add( LatLng pos ){
-    positions.add( pos );
+    if( Double.NaN != pos.latitude && Double.NaN != pos.longitude ) positions.add( pos );
   }
   
   public void addAll( Collection<LatLng> col ){
-    positions.addAll( col );
+    for( LatLng ll : col ) add( ll );
   }
   
   public int size() {
@@ -31,12 +33,18 @@ public class BoundedLocations {
     double swLat = 90, swLng = 180, neLat = -90, neLng = -180;
     for( int ix = 0; ix < Math.min( to, positions.size() ); ix++ ){
       LatLng ll = positions.get( ix );
+      if( Double.NaN == ll.latitude || Double.NaN == ll.longitude ) continue;
       swLat = Math.min( swLat, ll.latitude );
       swLng = Math.min( swLng, ll.longitude );
       neLat = Math.max( neLat, ll.latitude );
       neLng = Math.max( neLng, ll.longitude );
     }
-    return new LatLngBounds( new LatLng( swLat, swLng ), new LatLng( neLat, neLng ) );
+    try{
+      return new LatLngBounds( new LatLng( swLat, swLng ), new LatLng( neLat, neLng ) );
+    }catch( IllegalArgumentException e ) {
+      Log.e( "BoundedLocations", positions.toString() );
+      return null;
+    }
   }
 
   public void clear() {

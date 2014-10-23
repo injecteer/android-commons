@@ -43,9 +43,14 @@ public class BaseUtils {
   
   public static final NumberFormat FLOAT_FORMATTER;
   
+  public static final NumberFormat INT_FORMATTER;
+  
   static{
     DECIMAL_FORMAT_SYMBOLS.setDecimalSeparator( '.' );
     FLOAT_FORMATTER = new DecimalFormat( "###.######", DECIMAL_FORMAT_SYMBOLS );
+    INT_FORMATTER = new DecimalFormat();
+    INT_FORMATTER.setMaximumFractionDigits( 0 );
+    INT_FORMATTER.setGroupingUsed( false );
   }
   
   public static String formatPrice( Number price, String currencyStr ) {
@@ -196,10 +201,14 @@ public class BaseUtils {
     return res;
   }
 
-  public static String halfLinebreak( String v ) {
+  public static String halfLinebreak( String v, int limit ) {
+    if( v.length() <= limit ) return v;
     StringBuilder sb = new StringBuilder();
+    String[] split = v.split( ", " );
+    v = split[ 0 ] + ", " + split[ split.length - 1 ];
+    if( v.length() <= limit ) return v;
     int mid = v.length() >> 1;
-    for( String s:v.split( ", " ) ){
+    for( String s:new String[]{ split[ 0 ], split[ split.length - 1 ] } ){
       int lenBefore = sb.length();
       sb.append( s ).append( ", " );
       if( lenBefore < mid && sb.length() >= mid ) sb.append( "\n" );
@@ -222,7 +231,12 @@ public class BaseUtils {
 
   public static void a2p( List<NameValuePair> res, String key, Object value ) {
     if( null == key || null == value ) return;
-    String val = String.class.equals( value.getClass() ) ? (String)value : ( "" + value );
+    String val = null;
+    if( Number.class.isAssignableFrom( value.getClass() ) ){
+      Number n = (Number)value;
+      val = n.floatValue() == n.intValue() ? INT_FORMATTER.format( n ) : FLOAT_FORMATTER.format( n );
+    }else
+      val = String.class.equals( value.getClass() ) ? (String)value : ( "" + value );
     if( !isEmpty( val ) ) res.add( new BasicNameValuePair( key, val ) );
   }
 

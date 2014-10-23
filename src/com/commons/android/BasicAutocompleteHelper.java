@@ -31,6 +31,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.GoogleMap.InfoWindowAdapter;
 import com.google.android.gms.maps.GoogleMap.OnInfoWindowClickListener;
 import com.google.android.gms.maps.GoogleMap.OnMapClickListener;
+import com.google.android.gms.maps.GoogleMap.OnMapLongClickListener;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.UiSettings;
@@ -55,7 +56,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   
   protected LocationTuple locationTuple = new LocationTuple( null, "" );
   
-  protected Drawable iconTextClear;
+  protected Drawable iconTextClear, leftDrawable;
   
   protected OnClearListener onClearListener = null;
   
@@ -87,6 +88,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     View container = 0 == includeId ? ctx.findViewById( containerId ) : ctx.findViewById( includeId ).findViewById( containerId );
     
     input = (AutoCompleteTextView)container.findViewById( autocompleteId );
+    leftDrawable = input.getCompoundDrawables()[ 0 ];
     input.setText( "" );
     input.setOnItemClickListener( this );
     input.setOnTouchListener( this );
@@ -123,6 +125,12 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     map.setOnMapClickListener( new OnMapClickListener() {
       @Override public void onMapClick( final LatLng loc ) {
         map.clear();
+        locationTuple.clear();
+      }
+    } );
+    map.setOnMapLongClickListener( new OnMapLongClickListener() {
+      @Override public void onMapLongClick( LatLng loc ) {
+        map.clear();
         locationTuple.setLocation( BaseUtils.toLocation( loc ) );
         locationTuple.setName( null );
         final MarkerOptions mo = new MarkerOptions()
@@ -137,7 +145,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
             map.clear();
             String n = locationTuple.getName();
             if( !BaseUtils.isEmpty( n ) ){
-              if( 22 > n.length() ) n = BaseUtils.halfLinebreak( n ); 
+              n = BaseUtils.halfLinebreak( n, 22 ); 
               mo.title( n );
               map.addMarker( mo ).showInfoWindow();
             }
@@ -249,7 +257,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   @Override public void beforeTextChanged( CharSequence arg0, int arg1, int arg2, int arg3 ) {}
 
   public void setClearIconVisible( boolean visible ) {
-    input.setCompoundDrawables( null, null, visible ? iconTextClear : null, null );
+    input.setCompoundDrawables( leftDrawable, null, visible ? iconTextClear : null, null );
   }
 
   public void checkTextWatcher() {

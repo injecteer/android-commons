@@ -48,6 +48,8 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   
   protected Activity ctx;
   
+  protected View root;
+  
   protected final SingletonApplicationBase app;
   
   public AutoCompleteTextView input;
@@ -75,17 +77,18 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   private LocationClient locationClient;
 
   public BasicAutocompleteHelper( SingletonApplicationBase app, Activity activity, int containerId, int clearIconId, int autocompleteId, int progressBarId ) {
-    this( app, activity, containerId, 0, clearIconId, autocompleteId, progressBarId );
+    this( app, activity, null, containerId, clearIconId, autocompleteId, progressBarId );
   }
   
-  public BasicAutocompleteHelper( SingletonApplicationBase app, Activity activity, int containerId, int includeId, int clearIconId, int autocompleteId, int progressBarId ) {
+  public BasicAutocompleteHelper( SingletonApplicationBase app, Activity activity, View root, int containerId, int clearIconId, int autocompleteId, int progressBarId ) {
     this.app = app;
     this.ctx = activity;
+    this.root = root;
     
     iconTextClear = ctx.getResources().getDrawable( clearIconId );
     iconTextClear.setBounds( 0, 0, iconTextClear.getIntrinsicWidth(), iconTextClear.getIntrinsicHeight() );
     
-    View container = 0 == includeId ? ctx.findViewById( containerId ) : ctx.findViewById( includeId ).findViewById( containerId );
+    View container = null == root ? ctx.findViewById( containerId ) : root.findViewById( containerId );
     
     input = (AutoCompleteTextView)container.findViewById( autocompleteId );
     leftDrawable = input.getCompoundDrawables()[ 0 ];
@@ -109,7 +112,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   public void initMap( int mapId, final int markerId, InfoWindowAdapter infoWindowAdapter ) {
     MapsInitializer.initialize( ctx );
     
-    mapView = (MapView)ctx.findViewById( mapId );
+    mapView = (MapView)( null == root ? ctx.findViewById( mapId ) : root.findViewById( mapId ) );
     mapView.onCreate( null );
     map = mapView.getMap();
     if( null != infoWindowAdapter ) map.setInfoWindowAdapter( infoWindowAdapter );
@@ -144,7 +147,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
           @Override public void run() {
             map.clear();
             String n = locationTuple.getName();
-            if( !BaseUtils.isEmpty( n ) ){
+            if( !BaseUtils.anyEmpty( n ) ){
               n = BaseUtils.halfLinebreak( n, 22 ); 
               mo.title( n );
               map.addMarker( mo ).showInfoWindow();
@@ -191,7 +194,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   public void onTextChanged( CharSequence txt, int start, int before, int count ) {
     String text = txt.toString().trim();
     delayedHandler.removeMessages( DelayedGeocodeHandler.MESSAGE_TEXT_CHANGED );
-    if( BaseUtils.isEmpty( text ) ){
+    if( BaseUtils.anyEmpty( text ) ){
       fireOnlyOnAdd = true;
       locationTuple = new LocationTuple( null, null );
     }else{
@@ -208,7 +211,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   public boolean onTouch( View v, MotionEvent event ) {
     EditText vv = (EditText)v;
     if( MotionEvent.ACTION_UP != event.getAction() ) return false;
-    if( BaseUtils.isEmpty( vv.getText().toString().trim() ) )
+    if( BaseUtils.anyEmpty( vv.getText().toString().trim() ) )
       showPreSuggestions();
     else if( null != vv.getCompoundDrawables()[ 2 ] ){
       boolean tappedX = event.getX() > ( vv.getWidth() - vv.getPaddingRight() - iconTextClear.getIntrinsicWidth() );
@@ -268,7 +271,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   }
 
   public void removeTextWatcher() {
-    BaseUtils.hideKeyboard( ctx, input );
+    BaseUtils.hideKeyboard( ctx );
     delayedHandler.removeMessages( DelayedGeocodeHandler.MESSAGE_TEXT_CHANGED );
     input.removeTextChangedListener( this );
     input.addTextChangedListener( NO_OP_TEXTWATCHER );

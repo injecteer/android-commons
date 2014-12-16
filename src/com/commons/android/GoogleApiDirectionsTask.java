@@ -31,24 +31,13 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
 
   @Override
   protected JSONObject doInBackground( Location... params ) {
-    String url = "http://maps.googleapis.com/maps/api/directions/json?sensor=true&";
-    String origin = null, dest = null;
+    if( 2 > params.length ) return null;
+    
+    String origin = BaseUtils.asString( params[ 0 ] ), dest = BaseUtils.asString( params[ 1 ] );
+    String url = "http://maps.googleapis.com/maps/api/directions/json?sensor=true&origin=" + origin + "&destination=" + dest;
+    if( 3 == params.length && null != params[ 2 ] ) url += "&waypoints=" + BaseUtils.asString( params[ 2 ] );
+    
     try{
-      switch( params.length ){
-        case 2:
-          origin = BaseUtils.asString( params[ 0 ] );
-          dest = BaseUtils.asString( params[ 1 ] );
-          url += "&origin=" + origin + "&destination=" + dest;
-          break;
-        case 3:
-          origin = BaseUtils.asString( params[ 0 ] );
-          String via = BaseUtils.asString( params[ 1 ] );
-          dest = BaseUtils.asString( params[ 2 ] );
-          url += "&origin=" + origin + "&destination=" + dest + "&waypoints=" + via;
-          break;
-        default:
-          return null;
-      }
       Log.i( "DirectionsProvider", "url " + url );
       ResponseTuple rt = app.doGet( url, 4000 );
       if( 200 == rt.getStatusCode() ) return rt.getJson();

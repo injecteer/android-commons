@@ -2,6 +2,9 @@ package com.commons.android;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
@@ -32,6 +35,8 @@ import android.location.Location;
 import android.support.v4.app.NotificationCompat;
 import android.util.Base64;
 import android.util.Log;
+import android.view.View;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 
@@ -128,14 +133,13 @@ public class BaseUtils {
     }
   }
 
-  public static void hideKeyboard( Activity activity, EditText et ) {
+  public static void hideKeyboard( Activity activity ) {
     InputMethodManager imm = (InputMethodManager)activity.getSystemService( Context.INPUT_METHOD_SERVICE );
-    imm.hideSoftInputFromWindow( et.getWindowToken(), 0 );
-  }
-
-  public static void hideKeyboard( Activity activity, EditText[] ets ) {
-    InputMethodManager imm = (InputMethodManager)activity.getSystemService( Context.INPUT_METHOD_SERVICE );
-    for( EditText et : ets ) imm.hideSoftInputFromWindow( et.getWindowToken(), 0 );
+    View f = activity.getCurrentFocus();
+    if( null != f && null != f.getWindowToken() && EditText.class.isAssignableFrom( f.getClass() ) )
+      imm.hideSoftInputFromWindow( f.getWindowToken(), 0 );
+    else 
+      activity.getWindow().setSoftInputMode( WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN );
   }
 
   public static void showNotification( Context ctx, Intent i, TrayAttr trayAttr, int trayId, String fromTray, long[] vibratePattern ) {
@@ -158,7 +162,7 @@ public class BaseUtils {
            .setOngoing( trayAttr.onGoing )
            .setContentTitle( ctx.getString( trayAttr.title ) );
     
-    String txt = isEmpty( trayAttr.text ) ? ( 0 != trayAttr.textId ? ctx.getString( trayAttr.textId ) : null ) : trayAttr.text;
+    String txt = anyEmpty( trayAttr.text ) ? ( 0 != trayAttr.textId ? ctx.getString( trayAttr.textId ) : null ) : trayAttr.text;
     if( null != txt ) builder.setContentText( txt );
     
     if( trayAttr.onGoing ) 
@@ -222,11 +226,31 @@ public class BaseUtils {
     return BitmapFactory.decodeByteArray( avatar, 0, avatar.length );
   }
 
+  public static boolean anyEmpty( String... ss ) {
+    boolean res = false;
+    for( String s : ss ) res |= null == s || s.isEmpty() || "null".equals( s );
+    return res;
+  }
+  
   public static boolean isEmpty( String... ss ) {
     for( String s : ss ){
       if( null == s || s.isEmpty() || "null".equals( s ) ) return true;
     }
     return false;
+  }
+  
+  public static boolean anyNotEmpty( String... ss ) {
+    for( String s : ss ){
+      if( !( null == s || s.isEmpty() || "null".equals( s ) ) ) return true;
+    }
+    return false;
+  }
+  
+  public static boolean allNotEmpty( String... ss ) {
+    for( String s : ss ){
+      if( null == s || s.isEmpty() || "null".equals( s ) ) return false;
+    }
+    return true;
   }
 
   public static void a2p( List<NameValuePair> res, String key, Object value ) {
@@ -237,11 +261,15 @@ public class BaseUtils {
       val = n.floatValue() == n.intValue() ? INT_FORMATTER.format( n ) : FLOAT_FORMATTER.format( n );
     }else
       val = String.class.equals( value.getClass() ) ? (String)value : ( "" + value );
-    if( !isEmpty( val ) ) res.add( new BasicNameValuePair( key, val ) );
+    if( !anyEmpty( val ) ) res.add( new BasicNameValuePair( key, val ) );
   }
 
   public static String asString( Location loc ) {
     return FLOAT_FORMATTER.format( loc.getLatitude() ) + "," + FLOAT_FORMATTER.format( loc.getLongitude() );
+  }
+  
+  public static String asStringWithVector( Location loc ) {
+    return asString( loc ) + "," + INT_FORMATTER.format( loc.getSpeed() ) + "," + INT_FORMATTER.format( loc.getBearing() );
   }
   
   public static String asString( LatLng loc ) {
@@ -249,7 +277,7 @@ public class BaseUtils {
   }
   
   public static Location locationFromString( String s ) {
-    if( isEmpty( s ) ) return null;
+    if( anyEmpty( s ) ) return null;
     String[] split = s.split( "," );
     if( 2 > split.length ) return null;
     Location loc = new Location( "" );
@@ -277,4 +305,54 @@ public class BaseUtils {
     return l;
   }
 
+  /**
+   * On Android 3.0 and above, while using the ActionBar tabbed navigation style, the tabs sometimes appear above the action bar.
+   * This helper method allows you to control the 'hasEmbeddedTabs' behaviour.
+   * A value of true will put the tabs inside the ActionBar, a value of false will put it above or below the ActionBar.
+   *
+   * You should call this method while initialising your ActionBar tabs.
+   * Don't forget to also call this method during orientation changes (in the onConfigurationChanged() method).
+   *
+   * @param inActionBar
+   * @param inHasEmbeddedTabs
+   */
+  public static void setHasEmbeddedTabs( Object inActionBar, final boolean inHasEmbeddedTabs ) {
+    // get the ActionBar class
+    Class<?> actionBarClass = inActionBar.getClass();
+
+    // if it is a Jelly Bean implementation (ActionBarImplJBMR2), get the super
+    // super class (ActionBarImplICS)
+    if( "android.support.v7.app.ActionBarImplJBMR2".equals( actionBarClass.getName() ) ){
+      actionBarClass = actionBarClass.getSuperclass().getSuperclass();
+    }else if( "android.support.v7.app.ActionBarImplJB".equals( actionBarClass.getName() ) ){
+    // if it is a Jelly Bean implementation (ActionBarImplJB), get the super
+    // class (ActionBarImplICS)
+      actionBarClass = actionBarClass.getSuperclass();
+    }
+
+    try{
+      // try to get the mActionBar field, because the current ActionBar is
+      // probably just a wrapper Class
+      // if this fails, no worries, this will be an instance of the native
+      // ActionBar class or from the ActionBarImplBase class
+      final Field actionBarField = actionBarClass.getDeclaredField( "mActionBar" );
+      actionBarField.setAccessible( true );
+      inActionBar = actionBarField.get( inActionBar );
+      actionBarClass = inActionBar.getClass();
+    }catch( IllegalAccessException | IllegalArgumentException | NoSuchFieldException e ){
+    }
+
+    try{
+      // now call the method setHasEmbeddedTabs, this will put the tabs inside
+      // the ActionBar
+      // if this fails, you're on you own <img
+      // src="http://www.blogc.at/wp-includes/images/smilies/icon_wink.gif"
+      // alt=";-)" class="wp-smiley">
+      final Method method = actionBarClass.getDeclaredMethod( "setHasEmbeddedTabs", new Class[] { Boolean.TYPE } );
+      method.setAccessible( true );
+      method.invoke( inActionBar, new Object[] { inHasEmbeddedTabs } );
+    }catch( NoSuchMethodException | InvocationTargetException | IllegalAccessException | IllegalArgumentException e ){
+    }
+  }
+  
 }

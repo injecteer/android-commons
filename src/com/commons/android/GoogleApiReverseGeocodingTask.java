@@ -7,7 +7,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import android.os.AsyncTask;
-import android.util.Log;
 
 public class GoogleApiReverseGeocodingTask extends AsyncTask<Void, Void, Void> {
 
@@ -54,7 +53,7 @@ public class GoogleApiReverseGeocodingTask extends AsyncTask<Void, Void, Void> {
         locTuple.setName( name );
       }
     }catch( Exception e ){
-      Log.e( "GoogleApiReverseGeocodingTask", "", e );
+      Logg.e( "GoogleApiReverseGeocodingTask", "", e );
     }
     return null;
   }

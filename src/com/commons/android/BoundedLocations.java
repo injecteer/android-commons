@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import android.util.Log;
-
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 
@@ -42,7 +40,7 @@ public class BoundedLocations {
     try{
       return new LatLngBounds( new LatLng( swLat, swLng ), new LatLng( neLat, neLng ) );
     }catch( IllegalArgumentException e ) {
-      Log.e( "BoundedLocations", positions.toString() );
+      Logg.e( this, positions.toString() );
       return null;
     }
   }

@@ -7,7 +7,6 @@ import org.json.JSONObject;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
-import android.util.Log;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
@@ -38,7 +37,7 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
     if( 3 == params.length && null != params[ 2 ] ) url += "&waypoints=" + BaseUtils.asString( params[ 2 ] );
     
     try{
-      Log.i( "DirectionsProvider", "url " + url );
+      Logg.i( this, "url " + url );
       ResponseTuple rt = app.doGet( url, 4000 );
       if( 200 == rt.getStatusCode() ) return rt.getJson();
     }catch( Exception e ){
@@ -58,7 +57,7 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
     }catch( Exception e ){
       e.printStackTrace();
     }
-    Log.i( "DirectionsProvider", "time elapsed " + ( System.currentTimeMillis() - start ) + " ms" );
+    Logg.i( "DirectionsProvider", "time elapsed " + ( System.currentTimeMillis() - start ) + " ms" );
   }
 
   private int decodePoly( String encoded ) {

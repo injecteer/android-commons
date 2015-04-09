@@ -12,7 +12,6 @@ import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
-import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
 
@@ -58,7 +57,7 @@ public class DelayedGeocodeHandler extends Handler {
         ResponseTuple rt = app.doGet( "http://maps.google.com/maps/api/geocode/json?sensor=true&address=" + addr + "&language=" + defaultLoc.getLanguage(), 3000 );
         if( 200 == rt.getStatusCode() ) return rt.getJson();
       }catch( Exception e ){
-        Log.e( "DelayedGeocodeHandler", "", e );
+        Logg.e( this, "", e );
       }
       return null;
     }
@@ -88,9 +87,9 @@ public class DelayedGeocodeHandler extends Handler {
           l.setProvider( country );
           helper.add( l, addr );
         }
-//        Log.i( "GoogleApiGeocodingTask", "got " + uniques + " results in " + ( System.currentTimeMillis() - start ) + " ms" );
+//        Logg.e( this, "got " + uniques + " results in " + ( System.currentTimeMillis() - start ) + " ms" );
       }catch( Exception e ){
-        Log.e( "GoogleApiGeocodingTask", "", e );
+        Logg.e( this, "", e );
       }finally{
         progressBar.setVisibility( View.GONE );
       }

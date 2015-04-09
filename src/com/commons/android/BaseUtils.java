@@ -31,7 +31,6 @@ import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.support.v4.app.NotificationCompat;
 import android.util.Base64;
-import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
@@ -110,7 +109,7 @@ public class BaseUtils {
       StringBuilder sb = new StringBuilder();
       String line = null;
       while( null != ( line = reader.readLine() ) ) sb.append( line );
-      if( log ) Log.i( "Utils", "lenght = " + sb.length() );
+      if( log ) Logg.i( BaseUtils.class, "lenght = " + sb.length() );
       return sb.toString().trim();
     }finally{
       reader.close();

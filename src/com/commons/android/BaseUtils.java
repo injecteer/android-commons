@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -29,6 +30,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
+import android.media.RingtoneManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Base64;
 import android.view.View;
@@ -45,6 +47,8 @@ public class BaseUtils {
   public static final NumberFormat FLOAT_FORMATTER;
   
   public static final NumberFormat INT_FORMATTER;
+
+  private static final Random rnd = new Random();
   
   static{
     DECIMAL_FORMAT_SYMBOLS.setDecimalSeparator( '.' );
@@ -165,12 +169,11 @@ public class BaseUtils {
       builder.setProgress( 0, 0, true );
     else{ 
       builder.setLights( 0xFFFFCC00, 1500, 800 );
-      if( trayAttr.sound )
-        builder//.setSound( RingtoneManager.getDefaultUri( RingtoneManager.TYPE_NOTIFICATION ) )
-               .setVibrate( vibratePattern );
+      if( null != vibratePattern ) builder.setVibrate( vibratePattern );
+      if( trayAttr.sound ) builder.setSound( RingtoneManager.getDefaultUri( RingtoneManager.TYPE_NOTIFICATION ) );
     }
     
-    PendingIntent contentIntent = PendingIntent.getActivity( ctx, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT );
+    PendingIntent contentIntent = PendingIntent.getActivity( ctx, rnd .nextInt(), notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT );
     builder.setContentIntent( contentIntent );
     return builder;
   }

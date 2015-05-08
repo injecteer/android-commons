@@ -28,6 +28,8 @@ public abstract class SingletonApplicationBase extends Application {
 
   public boolean isInBackground = false;
   
+  public long lastForegroundTransition = 0;
+  
   public String email;
   
   public String authToken;

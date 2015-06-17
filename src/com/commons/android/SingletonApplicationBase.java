@@ -138,13 +138,7 @@ public abstract class SingletonApplicationBase extends Application {
   }
 
   public void clearAuthData() {
-    PreferenceManager.getDefaultSharedPreferences( this ).edit()
-          .remove( "accountName" )
-          .remove( "authType" )
-          .remove( "authToken" )
-          .remove( "fullName" )
-          .remove( "avatar" )
-          .commit();
+    prefs.edit().clear().commit();
     authToken = null;
     fullName = null;
     email = null;

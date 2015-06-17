@@ -314,9 +314,12 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   }
 
   public void setTargetString( String v ) {
+    removeTextWatcher();
     fireOnlyOnAdd = false;
     locationTuple.setName( v );
     input.setText( v );
+    setClearIconVisible( true );
+    checkTextWatcher();
   }
   
   public void setLocationTuple( LocationTuple locationTuple ) {
@@ -324,6 +327,10 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     setTargetString( locationTuple.getName() );
   }
 
+  public void setOnClearListener( OnClearListener onClearListener ) {
+    this.onClearListener = onClearListener;
+  }
+  
   public LocationTuple getLocationTuple() {
     return locationTuple;
   }

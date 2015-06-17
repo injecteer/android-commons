@@ -267,7 +267,7 @@ public class BaseUtils {
     return FLOAT_FORMATTER.format( loc.getLatitude() ) + "," + FLOAT_FORMATTER.format( loc.getLongitude() );
   }
   
-  public static String asStringWithVector( Location loc ) {
+  public static String asStringWithBearing( Location loc ) {
     return asString( loc ) + "," + INT_FORMATTER.format( loc.getSpeed() ) + "," + INT_FORMATTER.format( loc.getBearing() );
   }
   

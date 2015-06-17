@@ -25,6 +25,7 @@ public class CountdownNotifier implements Runnable {
     this.TRAY_ID = tray_id;
     this.max = max;
     this.progress = max;
+    builder.setVibrate( null ).setSound( null );
   }
   
   public CountdownNotifier( NotificationManager manager, Builder builder, int tray_id, int max, int progress ) {

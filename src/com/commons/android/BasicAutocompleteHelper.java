@@ -60,8 +60,6 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   
   protected Drawable iconTextClear, leftDrawable;
   
-  protected OnClearListener onClearListener = null;
-  
   public ProgressBar autoCompleteProgressBar;
   
   protected Handler delayedHandler;
@@ -220,12 +218,16 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
         locationTuple.clear();
         fireOnlyOnAdd = true;
         setClearIconVisible( false );
-        if( null != onClearListener ) return onClearListener.onClear( input );
+        return onClear( input );
       }
     }
     return false;
   }
 
+  public boolean onClear( AutoCompleteTextView input ) {
+    return false;
+  }
+  
   @Override
   public void onItemClick( AdapterView<?> parent, View view, int position, long id ) {
     removeTextWatcher();
@@ -327,10 +329,6 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     setTargetString( locationTuple.getName() );
   }
 
-  public void setOnClearListener( OnClearListener onClearListener ) {
-    this.onClearListener = onClearListener;
-  }
-  
   public LocationTuple getLocationTuple() {
     return locationTuple;
   }
@@ -352,7 +350,4 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   @Override public void onDisconnected() {}
   @Override public void onConnectionFailed( ConnectionResult arg0 ) {}
   
-  public interface OnClearListener {
-    public boolean onClear( AutoCompleteTextView input );
-  }
 }

@@ -13,6 +13,8 @@ public class TrayAttr {
   public boolean onGoing = false;
   
   public boolean sound = true;
+  
+  public boolean vibrate = false;
 
   public TrayAttr( int icon ) {
     this.icon = icon;

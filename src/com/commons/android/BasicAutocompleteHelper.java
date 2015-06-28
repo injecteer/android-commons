@@ -240,6 +240,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   }
   
   protected void pan( final CameraUpdate upd ) {
+    if( null == map ) return;
     try{
       map.moveCamera( upd );
     }catch( IllegalStateException e ){

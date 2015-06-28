@@ -29,7 +29,7 @@ public class BoundedLocations {
   
   public LatLngBounds getBounds( int to ) {
     double swLat = 90, swLng = 180, neLat = -90, neLng = -180;
-    for( int ix = 0; ix < Math.min( to, positions.size() ); ix++ ){
+    for( int ix = 0; ix < Math.min( to + 1, positions.size() ); ix++ ){
       LatLng ll = positions.get( ix );
       if( Double.isNaN( ll.latitude ) || Double.isNaN( ll.longitude ) ) continue;
       swLat = Math.min( swLat, ll.latitude );

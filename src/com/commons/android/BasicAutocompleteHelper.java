@@ -192,9 +192,10 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   public void onTextChanged( CharSequence txt, int start, int before, int count ) {
     String text = txt.toString().trim();
     delayedHandler.removeMessages( DelayedGeocodeHandler.MESSAGE_TEXT_CHANGED );
-    if( BaseUtils.anyEmpty( text ) ){
+    if( BaseUtils.isEmpty( text ) ){
       fireOnlyOnAdd = true;
       locationTuple = new LocationTuple( null, null );
+      setClearIconVisible( false );
     }else{
       setClearIconVisible( true );
       if( text.length() >= THRESHOLD && ( !fireOnlyOnAdd || count > before ) && !text.equals( locationTuple.getName() ) ){
@@ -317,8 +318,12 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   }
 
   public void setTargetString( String v ) {
-    removeTextWatcher();
     fireOnlyOnAdd = false;
+    if( BaseUtils.isEmpty( v ) ){
+      setClearIconVisible( false );
+      return;
+    }
+    removeTextWatcher();
     locationTuple.setName( v );
     input.setText( v );
     setClearIconVisible( true );

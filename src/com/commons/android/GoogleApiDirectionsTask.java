@@ -18,21 +18,31 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
   
   private GoogleMap map;
   
+  private Location startLoc;
+  
   private List<LatLng> points;
   
   Long start = System.currentTimeMillis();
+
+  private int minStep = 50;
 
   public GoogleApiDirectionsTask( SingletonApplicationBase app, GoogleMap map, List<LatLng> points ) {
     this.app = app;
     this.map = map;
     this.points = points;
   }
+  
+  public GoogleApiDirectionsTask( SingletonApplicationBase app, GoogleMap map, int minStep, List<LatLng> points ) {
+    this( app, map, points );
+    this.minStep = minStep;
+  }
 
   @Override
   protected JSONObject doInBackground( Location... params ) {
     if( 2 > params.length ) return null;
     
-    String origin = BaseUtils.asString( params[ 0 ] ), dest = BaseUtils.asString( params[ 1 ] );
+    startLoc = params[ 0 ];
+    String origin = BaseUtils.asString( startLoc ), dest = BaseUtils.asString( params[ 1 ] );
     String url = "http://maps.googleapis.com/maps/api/directions/json?sensor=true&origin=" + origin + "&destination=" + dest;
     if( 3 == params.length && null != params[ 2 ] ) url += "&waypoints=" + BaseUtils.asString( params[ 2 ] );
     
@@ -61,11 +71,11 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
   }
 
   private int decodePoly( String encoded ) {
-    int index = 0, len = encoded.length();
     double lat = 0, lng = 0;
     points.clear();
-    
-    while( index < len ){
+    Location last = startLoc;
+
+    for( int index = 0; index < encoded.length(); ){
       int b, shift = 0, result = 0;
       do{
         b = encoded.charAt( index++ ) - 63;
@@ -85,7 +95,12 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
       int dlng = ( ( result & 1 ) != 0 ? ~( result >> 1 ) : ( result >> 1 ) );
       lng += dlng;
 
-      points.add( new LatLng( lat / 100000, lng / 100000 ) );
+      LatLng curr = new LatLng( lat / 100000, lng / 100000 );
+      Location loc = BaseUtils.toLocation( curr );
+      if( minStep <= loc.distanceTo( last ) ){
+        points.add( curr );
+        last = loc;
+      }
     }
     return points.size();
   }

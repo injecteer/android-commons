@@ -4,19 +4,14 @@ import java.util.List;
 
 import org.json.JSONObject;
 
-import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
 
-import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.PolylineOptions;
 
 public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObject> {
 
   private SingletonApplicationBase app;
-  
-  private GoogleMap map;
   
   private Location startLoc;
   
@@ -25,15 +20,21 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
   Long start = System.currentTimeMillis();
 
   private int minStep = 50;
+  
+  private Runnable onFinish;
 
-  public GoogleApiDirectionsTask( SingletonApplicationBase app, GoogleMap map, List<LatLng> points ) {
+  public GoogleApiDirectionsTask( SingletonApplicationBase app, List<LatLng> points ) {
     this.app = app;
-    this.map = map;
     this.points = points;
   }
   
-  public GoogleApiDirectionsTask( SingletonApplicationBase app, GoogleMap map, int minStep, List<LatLng> points ) {
-    this( app, map, points );
+  public GoogleApiDirectionsTask( SingletonApplicationBase app, List<LatLng> points, Runnable onFinish ) {
+    this( app, points );
+    this.onFinish = onFinish;
+  }
+  
+  public GoogleApiDirectionsTask( SingletonApplicationBase app, int minStep, List<LatLng> points, Runnable onFinish ) {
+    this( app, points, onFinish );
     this.minStep = minStep;
   }
 
@@ -61,8 +62,8 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
     if( null == json ) return;
     try{
       if( "OK".equals( json.optString( "status" ) ) ){
-        if( 1 < decodePoly( json.getJSONArray( "routes" ).getJSONObject( 0 ).getJSONObject( "overview_polyline" ).getString( "points" ) ) )
-          map.addPolyline( new PolylineOptions().color( Color.MAGENTA ).visible( true ).addAll( points ) );
+        decodePoly( json.getJSONArray( "routes" ).getJSONObject( 0 ).getJSONObject( "overview_polyline" ).getString( "points" ) );
+        if( null != onFinish ) onFinish.run();
       }
     }catch( Exception e ){
       e.printStackTrace();
@@ -70,7 +71,7 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
     Logg.i( "DirectionsProvider", "time elapsed " + ( System.currentTimeMillis() - start ) + " ms" );
   }
 
-  private int decodePoly( String encoded ) {
+  private void decodePoly( String encoded ) {
     double lat = 0, lng = 0;
     points.clear();
     Location last = startLoc;
@@ -102,7 +103,6 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
         last = loc;
       }
     }
-    return points.size();
   }
   
 }

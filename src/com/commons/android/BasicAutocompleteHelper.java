@@ -12,6 +12,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.View.OnTouchListener;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.widget.AdapterView;
@@ -19,7 +20,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
-import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
@@ -42,8 +43,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
 
 public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, OnItemClickListener, ConnectionCallbacks, OnConnectionFailedListener {
 
-  private static final int TEXT_WATCHER_SET_ID = 550555271;
-  
   public static final int THRESHOLD = 2;
   
   protected Activity ctx;
@@ -60,7 +59,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   
   protected Drawable iconTextClear, leftDrawable;
   
-  public ProgressBar autoCompleteProgressBar;
+  public View loader;
   
   protected Handler delayedHandler;
   
@@ -79,14 +78,19 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   }
   
   public BasicAutocompleteHelper( SingletonApplicationBase app, Activity activity, View root, int containerId, int clearIconId, int autocompleteId, int progressBarId ) {
+    this( app, activity, root, containerId, autocompleteId, progressBarId );
+    if( 0 != clearIconId ){
+      iconTextClear = ctx.getResources().getDrawable( clearIconId );
+      iconTextClear.setBounds( 0, 0, iconTextClear.getIntrinsicWidth(), iconTextClear.getIntrinsicHeight() );
+    }
+  }
+  
+  public BasicAutocompleteHelper( SingletonApplicationBase app, Activity activity, View root, int containerId, int autocompleteId, int progressBarId ) {
     this.app = app;
     this.ctx = activity;
     this.root = root;
     
-    iconTextClear = ctx.getResources().getDrawable( clearIconId );
-    iconTextClear.setBounds( 0, 0, iconTextClear.getIntrinsicWidth(), iconTextClear.getIntrinsicHeight() );
-    
-    View container = null == root ? ctx.findViewById( containerId ) : root.findViewById( containerId );
+    View container = null == root ? ctx.findViewById( containerId ) : ( 0 == containerId ? root : root.findViewById( containerId ) );
     
     input = (AutoCompleteTextView)container.findViewById( autocompleteId );
     leftDrawable = input.getCompoundDrawables()[ 0 ];
@@ -98,9 +102,9 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     
     NO_OP_TEXTWATCHER = new NoOpTextWatcher( this );
     
-    autoCompleteProgressBar = (ProgressBar)container.findViewById( progressBarId );
+    if( 0 != progressBarId ) loader = container.findViewById( progressBarId );
     
-    delayedHandler = new DelayedGeocodeHandler( app, this, autoCompleteProgressBar );
+    delayedHandler = new DelayedGeocodeHandler( app, this, loader );
   }
 
   public void initMap( int mapId, final int markerId ) {
@@ -120,7 +124,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
         closeMap();
         setClearIconVisible( true );
         removeTextWatcher();
-        setTargetString( locationTuple.getName() );
+        setTargetString( locationTuple.getName().toString() );
       }
     } );
     map.setOnMapClickListener( new OnMapClickListener() {
@@ -144,7 +148,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
         new GoogleApiReverseGeocodingTask( app, locationTuple, new Runnable() {
           @Override public void run() {
             map.clear();
-            String n = locationTuple.getName();
+            String n = locationTuple.getName().toString();
             if( !BaseUtils.anyEmpty( n ) ){
               n = BaseUtils.halfLinebreak( n, 22 ); 
               mo.title( n );
@@ -210,9 +214,10 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   public boolean onTouch( View v, MotionEvent event ) {
     EditText vv = (EditText)v;
     if( MotionEvent.ACTION_UP != event.getAction() ) return false;
-    if( BaseUtils.anyEmpty( vv.getText().toString().trim() ) )
+    if( BaseUtils.anyEmpty( vv.getText().toString().trim() ) ){
       showPreSuggestions();
-    else if( null != vv.getCompoundDrawables()[ 2 ] ){
+      return true;
+    }else if( null != iconTextClear && null != vv.getCompoundDrawables()[ 2 ] ){
       boolean tappedX = event.getX() > ( vv.getWidth() - vv.getPaddingRight() - iconTextClear.getIntrinsicWidth() );
       if( tappedX ){
         vv.setText( "" );
@@ -231,11 +236,15 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   
   @Override
   public void onItemClick( AdapterView<?> parent, View view, int position, long id ) {
+    if( android.R.id.text1 == view.getId() ) doItemClick( position );
+  }
+
+  public void doItemClick( int position ) {
     removeTextWatcher();
-    autoCompleteProgressBar.setVisibility( View.GONE );
+    if( null != loader ) loader.setVisibility( View.GONE );
     LocationTuple lt = autocompleteAdapter.getItem( position );
     if( null != lt.getLocation() )
-      locationTuple = lt;
+      setLocationTuple( lt );
     else
       openMap();
   }
@@ -264,14 +273,14 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   @Override public void beforeTextChanged( CharSequence arg0, int arg1, int arg2, int arg3 ) {}
 
   public void setClearIconVisible( boolean visible ) {
-    input.setCompoundDrawables( leftDrawable, null, visible ? iconTextClear : null, null );
+    if( null != iconTextClear ) input.setCompoundDrawables( leftDrawable, null, visible ? iconTextClear : null, null );
   }
 
   public void checkTextWatcher() {
-    if( null != input.getTag( TEXT_WATCHER_SET_ID ) ) return;
+    if( null != input.getTag() ) return;
     input.removeTextChangedListener( NO_OP_TEXTWATCHER );
     input.addTextChangedListener( this );
-    input.setTag( TEXT_WATCHER_SET_ID, "notnull" );
+    input.setTag( "notnull" );
   }
 
   public void removeTextWatcher() {
@@ -279,7 +288,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     delayedHandler.removeMessages( DelayedGeocodeHandler.MESSAGE_TEXT_CHANGED );
     input.removeTextChangedListener( this );
     input.addTextChangedListener( NO_OP_TEXTWATCHER );
-    input.setTag( TEXT_WATCHER_SET_ID, null );
+    input.setTag( null );
   }
 
   protected void showPreSuggestions() {
@@ -289,13 +298,20 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     input.showDropDown();
   }
 
-  public void add( Location loc, String name ) {
+  public void add( Location loc, CharSequence name ) {
     autocompleteAdapter.add( new LocationTuple( loc, name ) );
     autocompleteAdapter.notifyDataSetChanged();
   }
 
   public void initAdapter( boolean assignToInput ) {
-    autocompleteAdapter = new ArrayAdapter<LocationTuple>( ctx, android.R.layout.simple_dropdown_item_1line );
+    autocompleteAdapter = new ArrayAdapter<LocationTuple>( ctx, android.R.layout.simple_dropdown_item_1line ){
+      @Override public View getView( int position, View convertView, ViewGroup parent ) {
+        View v = super.getView( position, convertView, parent );
+        LocationTuple lt = getItem( position );
+        if( null != lt.getName() && !String.class.equals( lt.getName().getClass() ) ) ((TextView)v).setText( lt.getName() );
+        return v;
+      }
+    };
     autocompleteAdapter.setNotifyOnChange( true );
     if( assignToInput ) input.setAdapter( autocompleteAdapter );
   }
@@ -306,7 +322,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     locationTuple.setLocation( target );
   }
 
-  public String getTargetString() { return locationTuple.getName(); }
+  public String getTargetString() { return locationTuple.getName().toString(); }
 
   public void enable() {
     input.setEnabled( true );
@@ -318,13 +334,17 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   }
 
   public void setTargetString( String v ) {
+    locationTuple.setName( v );
+    fillText( v );
+  }
+
+  protected void fillText( CharSequence v ) {
     fireOnlyOnAdd = false;
     if( BaseUtils.isEmpty( v ) ){
       setClearIconVisible( false );
       return;
     }
     removeTextWatcher();
-    locationTuple.setName( v );
     input.setText( v );
     setClearIconVisible( true );
     checkTextWatcher();
@@ -332,7 +352,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   
   public void setLocationTuple( LocationTuple locationTuple ) {
     this.locationTuple = locationTuple;
-    setTargetString( locationTuple.getName() );
+    fillText( locationTuple.getName() );
   }
 
   public LocationTuple getLocationTuple() {

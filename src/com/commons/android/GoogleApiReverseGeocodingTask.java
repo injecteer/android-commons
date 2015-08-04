@@ -33,25 +33,37 @@ public class GoogleApiReverseGeocodingTask extends AsyncTask<Void, Void, Void> {
       JSONObject json = rt.getJson();
       if( null == json || !"ok".equalsIgnoreCase( json.optString( "status" ) ) ) return null;
       JSONArray array = json.getJSONArray( "results" );
-      String name = null, country = null;
+      String name = null, country = null, postalCode = null;
 
-      for( int ix = 0; ix < array.length() && BaseUtils.anyEmpty( country, name ); ix++ ){
+      for( int ix = 0; ix < array.length() && BaseUtils.anyEmpty( country, name, postalCode ); ix++ ){
         JSONObject comp = (JSONObject)array.get( ix );
         String types = comp.getString( "types" );
+        
         if( BaseUtils.isEmpty( country ) && "[\"country\",\"political\"]".equals( types ) ){
           JSONArray addComps = comp.getJSONArray( "address_components" );
-          for( int ixx = 0; ixx < addComps.length() && BaseUtils.isEmpty( country ); ixx++ ){
+          for( int ixx = 0; ixx < addComps.length() && BaseUtils.anyEmpty( country ); ixx++ ){
             JSONObject addComp = addComps.getJSONObject( ixx );
             if( "[\"country\",\"political\"]".equals( addComp.getString( "types" ) ) ){
               locTuple.getLocation().setProvider( addComp.getString( "short_name" ) );
               country = addComp.getString( "long_name" );
             }
           }
-        }else if( BaseUtils.anyEmpty( name ) && ( -1 != types.indexOf( "\"street_address\"" ) || -1 != types.indexOf( "\"route\"" ) ) )
+          
+        }else if( BaseUtils.isEmpty( postalCode ) && "[\"postal_code\"]".equals( types ) ){
+          JSONArray addComps = comp.getJSONArray( "address_components" );
+          for( int ixx = 0; ixx < addComps.length() && BaseUtils.anyEmpty( postalCode ); ixx++ ){
+            JSONObject addComp = addComps.getJSONObject( ixx );
+            if( "[\"postal_code\"]".equals( addComp.getString( "types" ) ) )
+              postalCode = addComp.optString( "short_name" ) + ",?\\s?";
+          }
+        
+        }else if( BaseUtils.anyEmpty( name ) && ( types.contains( "\"street_address\"" ) || types.contains( "\"route\"" ) ) )
           name = comp.getString( "formatted_address" );
-        if( BaseUtils.allNotEmpty( country, name ) ) name = name.substring( 0, name.lastIndexOf( country ) - 2 );
-        locTuple.setName( name );
       }
+      
+      if( BaseUtils.allNotEmpty( country, name ) ) name = name.substring( 0, name.lastIndexOf( country ) - 2 );
+      if( BaseUtils.allNotEmpty( postalCode, name ) ) name = name.replaceFirst( postalCode, "" );
+      locTuple.setName( name );
     }catch( Exception e ){
       Logg.e( "GoogleApiReverseGeocodingTask", "", e );
     }
@@ -60,7 +72,7 @@ public class GoogleApiReverseGeocodingTask extends AsyncTask<Void, Void, Void> {
   
   @Override
   protected void onPostExecute( Void result ) {
-    action.run();
+    if( null != action ) action.run();
   };
 
 }

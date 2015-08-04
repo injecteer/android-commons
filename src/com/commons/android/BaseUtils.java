@@ -49,6 +49,8 @@ public class BaseUtils {
   public static final NumberFormat INT_FORMATTER;
 
   private static final Random rnd = new Random();
+
+  public static final NumberFormat PRICE_FORMATTER = NumberFormat.getCurrencyInstance( Locale.getDefault() );
   
   static{
     DECIMAL_FORMAT_SYMBOLS.setDecimalSeparator( '.' );
@@ -56,6 +58,7 @@ public class BaseUtils {
     INT_FORMATTER = new DecimalFormat();
     INT_FORMATTER.setMaximumFractionDigits( 0 );
     INT_FORMATTER.setGroupingUsed( false );
+    PRICE_FORMATTER.setMaximumFractionDigits( 2 );
   }
   
   public static String formatPrice( Number price, String currencyStr ) {
@@ -68,10 +71,8 @@ public class BaseUtils {
   }
 
   public static String formatPrice( Number price, Currency currency ) {
-    NumberFormat nf = NumberFormat.getCurrencyInstance( Locale.getDefault() );
-    nf.setCurrency( currency );
-    nf.setMaximumFractionDigits( 0 );
-    return nf.format( price );
+    PRICE_FORMATTER.setCurrency( currency );
+    return PRICE_FORMATTER.format( price );
   }
 
   public static Location parseLocation( String json ) {
@@ -204,8 +205,9 @@ public class BaseUtils {
     return res;
   }
 
-  public static String halfLinebreak( String v, int limit ) {
+  public static String halfLinebreak( String v, int limit, String... lb ) {
     if( v.length() <= limit ) return v;
+    String lineBreak = 1 == lb.length ? lb[ 0 ] : "\n";
     StringBuilder sb = new StringBuilder();
     String[] split = v.split( ", " );
     v = split[ 0 ] + ", " + split[ split.length - 1 ];
@@ -214,7 +216,7 @@ public class BaseUtils {
     for( String s:new String[]{ split[ 0 ], split[ split.length - 1 ] } ){
       int lenBefore = sb.length();
       sb.append( s ).append( ", " );
-      if( lenBefore < mid && sb.length() >= mid ) sb.append( "\n" );
+      if( lenBefore < mid && sb.length() >= mid ) sb.append( lineBreak );
     }
     String res = sb.toString().trim();
     return res.endsWith( "," ) ? res.substring( 0, res.length() - 1 ) : res;
@@ -234,6 +236,13 @@ public class BaseUtils {
   public static boolean isEmpty( String... ss ) {
     for( String s : ss ){
       if( null == s || s.isEmpty() || "null".equals( s ) ) return true;
+    }
+    return false;
+  }
+  
+  public static boolean isEmpty( CharSequence... ss ) {
+    for( CharSequence s : ss ){
+      if( null == s || 0 == s.length() || "null".equals( s.toString() ) ) return true;
     }
     return false;
   }

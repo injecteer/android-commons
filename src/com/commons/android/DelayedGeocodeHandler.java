@@ -13,7 +13,6 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
 import android.view.View;
-import android.widget.ProgressBar;
 
 public class DelayedGeocodeHandler extends Handler {
   
@@ -23,9 +22,9 @@ public class DelayedGeocodeHandler extends Handler {
   
   private BasicAutocompleteHelper helper;
   
-  private ProgressBar progressBar;
+  private View progressBar;
   
-  public DelayedGeocodeHandler( SingletonApplicationBase app, BasicAutocompleteHelper helper, ProgressBar progressBar ) {
+  public DelayedGeocodeHandler( SingletonApplicationBase app, BasicAutocompleteHelper helper, View progressBar ) {
     super();
     this.app = app;
     this.helper = helper;
@@ -36,7 +35,7 @@ public class DelayedGeocodeHandler extends Handler {
   public void handleMessage( Message msg ) {
     if( msg.what != MESSAGE_TEXT_CHANGED ) return;
     String addr = (String)msg.obj;
-    progressBar.setVisibility( View.VISIBLE );
+    if( null != progressBar ) progressBar.setVisibility( View.VISIBLE );
     new GoogleApiGeocodingTask().execute( addr );
   }
 
@@ -82,7 +81,7 @@ public class DelayedGeocodeHandler extends Handler {
           for( int ixx = 0; ixx < components.length(); ixx++ ){
             JSONObject comp = (JSONObject)components.get( ixx );
             String types = comp.getString( "types" );
-            if( -1 != types.indexOf( "\"country\"" ) ) country = comp.getString( "short_name" );
+            if( types.contains( "\"country\"" ) ) country = comp.getString( "short_name" );
           }
           l.setProvider( country );
           helper.add( l, addr );
@@ -91,7 +90,7 @@ public class DelayedGeocodeHandler extends Handler {
       }catch( Exception e ){
         Logg.e( this, "", e );
       }finally{
-        progressBar.setVisibility( View.GONE );
+        if( null != progressBar ) progressBar.setVisibility( View.GONE );
       }
     }
   }

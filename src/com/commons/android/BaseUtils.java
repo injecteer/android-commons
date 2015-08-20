@@ -268,8 +268,8 @@ public class BaseUtils {
       Number n = (Number)value;
       val = n.floatValue() == n.intValue() ? INT_FORMATTER.format( n ) : FLOAT_FORMATTER.format( n );
     }else
-      val = String.class.equals( value.getClass() ) ? (String)value : ( "" + value );
-    if( !anyEmpty( val ) ) res.add( new BasicNameValuePair( key, val ) );
+      val = String.class.equals( value.getClass() ) ? (String)value : value.toString();
+    if( !isEmpty( val ) ) res.add( new BasicNameValuePair( key, val ) );
   }
 
   public static String asString( Location loc ) {

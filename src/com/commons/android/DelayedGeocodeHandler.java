@@ -1,8 +1,12 @@
 package com.commons.android;
 
 import java.net.URLEncoder;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.json.JSONArray;
@@ -17,6 +21,16 @@ import android.view.View;
 public class DelayedGeocodeHandler extends Handler {
   
   public static final int MESSAGE_TEXT_CHANGED = 0;
+  
+  public static final Map<String, String> SORTED_COMPONENTS = new HashMap<>();
+  
+  static{
+    SORTED_COMPONENTS.put( "locality", "" );
+    SORTED_COMPONENTS.put( "street_address", "" );
+    SORTED_COMPONENTS.put( "street_number", "" );
+    SORTED_COMPONENTS.put( "route", "" );
+    SORTED_COMPONENTS.put( "postal_code", "" );
+  }
   
   private SingletonApplicationBase app;
   
@@ -39,11 +53,27 @@ public class DelayedGeocodeHandler extends Handler {
     new GoogleApiGeocodingTask().execute( addr );
   }
 
+  public static String prettyAddress( JSONObject obj ) {
+    JSONArray components = obj.optJSONArray( "address_components" );
+    if( null == components ) return null;
+    Map<String,String> m = new LinkedHashMap<>( SORTED_COMPONENTS );
+    for( int ixx = 0; ixx < components.length(); ixx++ ){
+      JSONObject comp = (JSONObject)components.opt( ixx );
+      String types = comp.optString( "types" );
+      for( Entry<String, String> e : m.entrySet() ){
+        if( types.contains( "\"" + e.getKey() + "\"" ) ) e.setValue( comp.optString( "long_name" ) );
+      }
+    }
+    String addr = m.get( "street_address" ) + " " + m.get( "route" ) + " " + m.get( "street_number" );
+    addr = addr.trim();
+    String cityZip = m.get( "postal_code" ) + " " + m.get( "locality" );
+    cityZip = cityZip.trim();
+    return addr + ( BaseUtils.allNotEmpty( addr, cityZip ) ? ", " : "" ) + cityZip; 
+  }
+
   class GoogleApiGeocodingTask extends AsyncTask<String, Void, JSONObject>{
 
     Locale defaultLoc = Locale.getDefault();
-    
-    Set<String> uniques = new HashSet<String>();
     
     long start = System.currentTimeMillis();
     
@@ -67,24 +97,16 @@ public class DelayedGeocodeHandler extends Handler {
         if( null == json || !"OK".equals( json.optString( "status" ) ) ) return;
         helper.initAdapter( true );
         
+        Set<CharSequence> uniques = new HashSet<>();
         JSONArray array = json.getJSONArray( "results" ); 
         for( int ix = 0; ix < array.length(); ix++ ){
           JSONObject obj = array.optJSONObject( ix );
-          String addr = obj.getString( "formatted_address" );
-          if( !uniques.add( addr ) ) continue;
           JSONObject loc = obj.getJSONObject( "geometry" ).getJSONObject( "location" );
           Location l = new Location( "" );
           l.setLatitude( BaseUtils.FLOAT_FORMATTER.parse( loc.getString( "lat" ) ).doubleValue() );
           l.setLongitude( BaseUtils.FLOAT_FORMATTER.parse( loc.getString( "lng" ) ).doubleValue() ); 
-          JSONArray components = obj.getJSONArray( "address_components" );
-          String country = null;
-          for( int ixx = 0; ixx < components.length(); ixx++ ){
-            JSONObject comp = (JSONObject)components.get( ixx );
-            String types = comp.getString( "types" );
-            if( types.contains( "\"country\"" ) ) country = comp.getString( "short_name" );
-          }
-          l.setProvider( country );
-          helper.add( l, addr );
+          String addr = prettyAddress( obj );
+          if( null != addr && uniques.add( addr ) ) helper.add( l, addr );
         }
 //        Logg.e( this, "got " + uniques + " results in " + ( System.currentTimeMillis() - start ) + " ms" );
       }catch( Exception e ){

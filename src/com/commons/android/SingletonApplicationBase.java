@@ -103,30 +103,22 @@ public abstract class SingletonApplicationBase extends Application {
     return true;
   }
 
-  public void showAlertMsg( Activity act, int key ) {
-    showAlertMsg( act, key, false );
-  }
-
-  public void showAlertMsg( Activity act, int key, boolean finish ) {
+  public void showAlertMsg( Activity act, int key, boolean... finish ) {
     new AlertDialog.Builder( act )
-    .setTitle( android.R.string.dialog_alert_title )
-    .setMessage( key )
-    .setCancelable( false )
-    .setPositiveButton( android.R.string.ok, finish ? new FinishingListener( act ) : null )
-    .create().show();
+      .setTitle( android.R.string.dialog_alert_title )
+      .setMessage( key )
+      .setCancelable( false )
+      .setPositiveButton( android.R.string.ok, 1 == finish.length && finish[ 0 ] ? new FinishingListener( act ) : null )
+      .create().show();
   }
 
-  public void showAlertMsg( Activity act, String msg ) {
-    showAlertMsg( act, msg, false );
-  }
-
-  public void showAlertMsg( Activity act, String msg, boolean finish ) {
+  public void showAlertMsg( Activity act, String msg, boolean... finish ) {
     new AlertDialog.Builder( act )
-    .setTitle( android.R.string.dialog_alert_title )
-    .setMessage( msg )
-    .setCancelable( false )
-    .setPositiveButton( android.R.string.ok, finish ? new FinishingListener( act ) : null )
-    .create().show();
+      .setTitle( android.R.string.dialog_alert_title )
+      .setMessage( msg )
+      .setCancelable( false )
+      .setPositiveButton( android.R.string.ok, 1 == finish.length && finish[ 0 ] ? new FinishingListener( act ) : null )
+      .create().show();
   }
 
   public SQLiteDatabase getWritableDatabase() {

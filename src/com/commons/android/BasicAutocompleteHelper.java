@@ -216,7 +216,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     if( MotionEvent.ACTION_UP != event.getAction() ) return false;
     if( BaseUtils.anyEmpty( vv.getText().toString().trim() ) ){
       showPreSuggestions();
-      return true;
+      return null == iconTextClear;
     }else if( null != iconTextClear && null != vv.getCompoundDrawables()[ 2 ] ){
       boolean tappedX = event.getX() > ( vv.getWidth() - vv.getPaddingRight() - iconTextClear.getIntrinsicWidth() );
       if( tappedX ){

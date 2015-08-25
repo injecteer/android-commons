@@ -2,6 +2,7 @@ package com.commons.android;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
@@ -59,6 +60,7 @@ public class BaseUtils {
     INT_FORMATTER.setMaximumFractionDigits( 0 );
     INT_FORMATTER.setGroupingUsed( false );
     PRICE_FORMATTER.setMaximumFractionDigits( 2 );
+    PRICE_FORMATTER.setRoundingMode( RoundingMode.FLOOR );
   }
   
   public static String formatPrice( Number price, String currencyStr ) {

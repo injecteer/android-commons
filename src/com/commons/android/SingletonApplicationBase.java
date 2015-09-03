@@ -36,7 +36,7 @@ public abstract class SingletonApplicationBase extends Application {
   
   public String fullName;
   
-  private HttpClient httpClient;
+  protected HttpClient httpClient;
   
   protected SQLiteOpenHelper openHelper;
 
@@ -77,20 +77,20 @@ public abstract class SingletonApplicationBase extends Application {
     return doPost( new HttpPost( action ), timeout, postParams ).getStatusCode();
   }
 
-  public ResponseTuple doPost( HttpPost httppost, int timeout, List<NameValuePair> postParams ) throws Exception {
-    HttpClient httpClient = getHttpClient();
+  public ResponseTuple doPost( HttpPost httppost, int timeout, List<NameValuePair> postParams, HttpClient... hc ) throws Exception {
+    HttpClient httpClient = 1 == hc.length ? hc[ 0 ] : getHttpClient();
     HttpConnectionParams.setConnectionTimeout( httpClient.getParams(), timeout );
     httppost.setEntity( new UrlEncodedFormEntity( postParams, HTTP.UTF_8 ) );
     HttpResponse hr = httpClient.execute( httppost );
     return new ResponseTuple( hr.getStatusLine().getStatusCode(), BaseUtils.asString( hr ) );
   }
 
-  public ResponseTuple doPost( String url, int timeout, List<NameValuePair> postParams ) throws Exception {
-    return doPost( new HttpPost( url ), timeout, postParams );
+  public ResponseTuple doPost( String url, int timeout, List<NameValuePair> postParams, HttpClient... hc ) throws Exception {
+    return doPost( new HttpPost( url ), timeout, postParams, hc );
   }
 
-  public ResponseTuple doGet( String url, int timeout ) throws Exception {
-    HttpClient httpClient = getHttpClient();
+  public ResponseTuple doGet( String url, int timeout, HttpClient... hc ) throws Exception {
+    HttpClient httpClient = 1 == hc.length ? hc[ 0 ] : getHttpClient();
     HttpConnectionParams.setConnectionTimeout( httpClient.getParams(), timeout );
     HttpGet httpget = new HttpGet( url );
     HttpResponse hr = httpClient.execute( httpget );

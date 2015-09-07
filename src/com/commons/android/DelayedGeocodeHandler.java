@@ -3,7 +3,6 @@ package com.commons.android;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,14 +21,15 @@ public class DelayedGeocodeHandler extends Handler {
   
   public static final int MESSAGE_TEXT_CHANGED = 0;
   
-  public static final Map<String, String> SORTED_COMPONENTS = new HashMap<>();
+  public static final Map<String, String> COMPONENTS = new HashMap<>();
   
   static{
-    SORTED_COMPONENTS.put( "locality", "" );
-    SORTED_COMPONENTS.put( "street_address", "" );
-    SORTED_COMPONENTS.put( "street_number", "" );
-    SORTED_COMPONENTS.put( "route", "" );
-    SORTED_COMPONENTS.put( "postal_code", "" );
+    COMPONENTS.put( "locality", "" );
+    COMPONENTS.put( "street_address", "" );
+    COMPONENTS.put( "street_number", "" );
+    COMPONENTS.put( "route", "" );
+    COMPONENTS.put( "postal_code", "" );
+    COMPONENTS.put( "country", "" );
   }
   
   private SingletonApplicationBase app;
@@ -56,7 +56,7 @@ public class DelayedGeocodeHandler extends Handler {
   public static String prettyAddress( JSONObject obj ) {
     JSONArray components = obj.optJSONArray( "address_components" );
     if( null == components ) return null;
-    Map<String,String> m = new LinkedHashMap<>( SORTED_COMPONENTS );
+    Map<String,String> m = new HashMap<>( COMPONENTS );
     for( int ixx = 0; ixx < components.length(); ixx++ ){
       JSONObject comp = (JSONObject)components.opt( ixx );
       String types = comp.optString( "types" );
@@ -67,6 +67,7 @@ public class DelayedGeocodeHandler extends Handler {
     String addr = m.get( "street_address" ) + " " + m.get( "route" ) + " " + m.get( "street_number" );
     addr = addr.trim();
     String cityZip = m.get( "postal_code" ) + " " + m.get( "locality" );
+    if( BaseUtils.isEmpty( addr ) ) cityZip += ", " + m.get( "country" ); 
     cityZip = cityZip.trim();
     return addr + ( BaseUtils.allNotEmpty( addr, cityZip ) ? ", " : "" ) + cityZip; 
   }
@@ -106,7 +107,7 @@ public class DelayedGeocodeHandler extends Handler {
           l.setLatitude( BaseUtils.FLOAT_FORMATTER.parse( loc.getString( "lat" ) ).doubleValue() );
           l.setLongitude( BaseUtils.FLOAT_FORMATTER.parse( loc.getString( "lng" ) ).doubleValue() ); 
           String addr = prettyAddress( obj );
-          if( null != addr && uniques.add( addr ) ) helper.add( l, addr );
+          if( !BaseUtils.isEmpty( addr ) && uniques.add( addr ) ) helper.add( l, addr );
         }
 //        Logg.e( this, "got " + uniques + " results in " + ( System.currentTimeMillis() - start ) + " ms" );
       }catch( Exception e ){

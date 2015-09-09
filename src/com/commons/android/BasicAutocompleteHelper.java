@@ -202,7 +202,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
       setClearIconVisible( false );
     }else{
       setClearIconVisible( true );
-      if( text.length() >= THRESHOLD && ( !fireOnlyOnAdd || count > before ) && !text.equals( locationTuple.getName() ) ){
+      if( text.length() >= THRESHOLD && ( !fireOnlyOnAdd || txt.length() > before ) && !text.equals( locationTuple.getName() ) ){
         Message msg = Message.obtain( delayedHandler, DelayedGeocodeHandler.MESSAGE_TEXT_CHANGED, text );
         delayedHandler.sendMessageDelayed( msg, 500 );
       }

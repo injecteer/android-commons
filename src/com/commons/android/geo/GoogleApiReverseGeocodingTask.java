@@ -1,4 +1,4 @@
-package com.commons.android;
+package com.commons.android.geo;
 
 import java.net.URLEncoder;
 import java.util.Locale;
@@ -7,6 +7,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import android.os.AsyncTask;
+
+import com.commons.android.BaseUtils;
+import com.commons.android.Logg;
+import com.commons.android.ResponseTuple;
+import com.commons.android.SingletonApplicationBase;
 
 public class GoogleApiReverseGeocodingTask extends AsyncTask<Void, Void, Void> {
 

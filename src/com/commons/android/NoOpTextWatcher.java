@@ -1,5 +1,7 @@
 package com.commons.android;
 
+import com.commons.android.geo.BasicAutocompleteHelper;
+
 import android.text.Editable;
 import android.text.TextWatcher;
 

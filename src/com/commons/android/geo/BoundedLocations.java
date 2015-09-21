@@ -1,9 +1,10 @@
-package com.commons.android;
+package com.commons.android.geo;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.commons.android.Logg;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 

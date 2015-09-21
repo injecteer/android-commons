@@ -1,4 +1,4 @@
-package com.commons.android;
+package com.commons.android.geo;
 
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -16,6 +16,11 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
 import android.view.View;
+
+import com.commons.android.BaseUtils;
+import com.commons.android.Logg;
+import com.commons.android.ResponseTuple;
+import com.commons.android.SingletonApplicationBase;
 
 public class DelayedGeocodeHandler extends Handler {
   

@@ -1,4 +1,4 @@
-package com.commons.android;
+package com.commons.android.geo;
 
 import android.content.Context;
 import android.hardware.Sensor;

@@ -16,6 +16,8 @@ public class TrayAttr {
   
   public boolean vibrate = false;
 
+  public Integer soundId;
+
   public TrayAttr( int icon ) {
     this.icon = icon;
   }

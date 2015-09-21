@@ -32,6 +32,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.media.RingtoneManager;
+import android.net.Uri;
 import android.support.v4.app.NotificationCompat;
 import android.util.Base64;
 import android.view.View;
@@ -173,7 +174,11 @@ public class BaseUtils {
     else{ 
       builder.setLights( 0xFFFFCC00, 1500, 800 );
       if( null != vibratePattern ) builder.setVibrate( vibratePattern );
-      if( trayAttr.sound ) builder.setSound( RingtoneManager.getDefaultUri( RingtoneManager.TYPE_NOTIFICATION ) );
+      if( trayAttr.sound ){
+        Uri uri = null == trayAttr.soundId ? RingtoneManager.getDefaultUri( RingtoneManager.TYPE_NOTIFICATION ) : 
+                                             Uri.parse( "android.resource://" + ctx.getPackageName() + "/" + trayAttr.soundId );
+        builder.setSound( uri );
+      }
     }
     
     PendingIntent contentIntent = PendingIntent.getActivity( ctx, rnd .nextInt(), notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT );

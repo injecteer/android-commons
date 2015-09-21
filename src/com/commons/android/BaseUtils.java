@@ -1,13 +1,16 @@
 package com.commons.android;
 
 import java.io.BufferedReader;
+import java.io.FileDescriptor;
 import java.io.InputStreamReader;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.util.Calendar;
 import java.util.Currency;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -33,7 +36,9 @@ import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.provider.Settings.Secure;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationCompat.Builder;
 import android.util.Base64;
 import android.view.View;
 import android.view.WindowManager;
@@ -50,9 +55,11 @@ public class BaseUtils {
   
   public static final NumberFormat INT_FORMATTER;
 
-  private static final Random rnd = new Random();
+  public static final Random rnd = new Random();
 
   public static final NumberFormat PRICE_FORMATTER = NumberFormat.getCurrencyInstance( Locale.getDefault() );
+
+  public static int NOTIFICATION_LIGHTS;
   
   static{
     DECIMAL_FORMAT_SYMBOLS.setDecimalSeparator( '.' );
@@ -133,8 +140,15 @@ public class BaseUtils {
       return packageInfo.versionCode;
     }catch( NameNotFoundException e ){
       // should never happen
-      throw new RuntimeException("Could not get package name: " + e);
+      throw new RuntimeException( "Could not get package name: " + e );
     }
+  }
+
+  /**
+   * @return device id
+   */
+  public static String getSerial( Context context ) {
+    return Secure.getString( context.getContentResolver(), Secure.ANDROID_ID );
   }
 
   public static void hideKeyboard( Activity activity ) {
@@ -144,6 +158,11 @@ public class BaseUtils {
       imm.hideSoftInputFromWindow( f.getWindowToken(), 0 );
     else 
       activity.getWindow().setSoftInputMode( WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN );
+  }
+
+  public static void cancelNotification( Context ctx, int trayId ) {
+    NotificationManager nm = (NotificationManager)ctx.getSystemService( Context.NOTIFICATION_SERVICE );
+    nm.cancel( trayId );
   }
 
   public static void showNotification( Context ctx, Intent i, TrayAttr trayAttr, int trayId, String fromTray, long[] vibratePattern ) {
@@ -157,22 +176,23 @@ public class BaseUtils {
     return getNotificationBuilder( ctx, notificationIntent, trayAttr, fromTray, vibratePattern ).build();
   }
 
-  public static NotificationCompat.Builder getNotificationBuilder( Context ctx, Intent notificationIntent, TrayAttr trayAttr, String fromTray, long[] vibratePattern ) {
+  public static Builder getNotificationBuilder( Context ctx, Intent notificationIntent, TrayAttr trayAttr, String fromTray, long[] vibratePattern ) {
     notificationIntent.putExtra( fromTray, true );
-    NotificationCompat.Builder builder = new NotificationCompat.Builder( ctx );
+    Builder builder = new Builder( ctx );
     builder.setSmallIcon( trayAttr.icon )
            .setPriority( NotificationCompat.PRIORITY_MAX )
            .setAutoCancel( true )
            .setOngoing( trayAttr.onGoing )
-           .setContentTitle( ctx.getString( trayAttr.title ) );
+           .setContentTitle( !isEmpty( trayAttr.titleString ) ? trayAttr.titleString : ctx.getString( trayAttr.title ) );
     
-    String txt = anyEmpty( trayAttr.text ) ? ( 0 != trayAttr.textId ? ctx.getString( trayAttr.textId ) : null ) : trayAttr.text;
+    String txt = isEmpty( trayAttr.text ) ? ( 0 != trayAttr.textId ? ctx.getString( trayAttr.textId ) : null ) : trayAttr.text;
     if( null != txt ) builder.setContentText( txt );
+    if( 0 != trayAttr.number ) builder.setNumber( trayAttr.number ); 
     
     if( trayAttr.onGoing ) 
       builder.setProgress( 0, 0, true );
     else{ 
-      builder.setLights( 0xFFFFCC00, 1500, 800 );
+      builder.setLights( NOTIFICATION_LIGHTS, 1500, 800 );
       if( null != vibratePattern ) builder.setVibrate( vibratePattern );
       if( trayAttr.sound ){
         Uri uri = null == trayAttr.soundId ? RingtoneManager.getDefaultUri( RingtoneManager.TYPE_NOTIFICATION ) : 
@@ -305,10 +325,6 @@ public class BaseUtils {
     return null;
   }
 
-  public BaseUtils() {
-    super();
-  }
-
   public static LatLng toLatLng( Location loc ) {
     return new LatLng( loc.getLatitude(), loc.getLongitude() );
   }
@@ -318,6 +334,33 @@ public class BaseUtils {
     l.setLatitude( loc.latitude );
     l.setLongitude( loc.longitude );
     return l;
+  }
+
+  public static Date clearTime( Date... d ) {
+    Calendar c = Calendar.getInstance();
+    if( 0 < d.length && null != d[ 0 ] ) c.setTime( d[ 0 ] );
+    c.set( Calendar.HOUR_OF_DAY, 0 );
+    c.set( Calendar.MINUTE, 0 );
+    c.set( Calendar.SECOND, 0 );
+    return c.getTime();
+  }
+
+  public static Bitmap decodeBitmapFromFile( String filename ) {
+    final BitmapFactory.Options options = new BitmapFactory.Options();
+    options.inJustDecodeBounds = true;
+    BitmapFactory.decodeFile( filename, options );
+  
+    options.inJustDecodeBounds = false;
+    return BitmapFactory.decodeFile( filename, options );
+  }
+
+  public static Bitmap decodeBitmapFromDescriptor( FileDescriptor fileDescriptor ) {
+    final BitmapFactory.Options options = new BitmapFactory.Options();
+    options.inJustDecodeBounds = true;
+    BitmapFactory.decodeFileDescriptor( fileDescriptor, null, options );
+  
+    options.inJustDecodeBounds = false;
+    return BitmapFactory.decodeFileDescriptor( fileDescriptor, null, options );
   }
 
 }

@@ -8,11 +8,10 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.params.ClientPNames;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.protocol.HTTP;
 
-import android.accounts.Account;
-import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
@@ -30,12 +29,6 @@ public abstract class SingletonApplicationBase extends Application {
   
   public long lastForegroundTransition = 0;
   
-  public String email;
-  
-  public String authToken;
-  
-  public String fullName;
-  
   protected HttpClient httpClient;
   
   protected SQLiteOpenHelper openHelper;
@@ -52,27 +45,20 @@ public abstract class SingletonApplicationBase extends Application {
     restoreUserData();
   }
   
-  public void restoreUserData() {
-    if( null == authToken ){
-      email = prefs.getString( "accountName", "" );
-      authToken = prefs.getString( "authToken", null );
-      fullName = prefs.getString( "fullName", null );
-    }
-    if( BaseUtils.isEmpty( email ) ){
-      Account[] googleAccs = AccountManager.get( this ).getAccountsByType( "com.google" );
-      if( 0 != googleAccs.length ) email = googleAccs[ 0 ].name;
-    }
-  }  
+  public void restoreUserData() {}  
   
-  public String getId() {
-    return null == authToken ? email : authToken;
-  }
-
   public HttpClient getHttpClient() {
-    if( null == httpClient ) httpClient = AndroidHttpClient.newInstance( "Android", this );
+    if( null == httpClient ){
+      httpClient = AndroidHttpClient.newInstance( "Android", this );
+      httpClient.getParams().setBooleanParameter( ClientPNames.HANDLE_REDIRECTS, true );
+    }
     return httpClient;
   }
 
+  public boolean isAuthenticated() {
+    return false;
+  }
+  
   public int doPostStatus( String action, int timeout, List<NameValuePair> postParams ) throws Exception {
     return doPost( new HttpPost( action ), timeout, postParams ).getStatusCode();
   }
@@ -131,9 +117,6 @@ public abstract class SingletonApplicationBase extends Application {
 
   public void clearAuthData() {
     prefs.edit().clear().commit();
-    authToken = null;
-    fullName = null;
-    email = null;
   }
 
   public static class FinishingListener implements DialogInterface.OnClickListener {

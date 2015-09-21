@@ -18,6 +18,10 @@ public class TrayAttr {
 
   public Integer soundId;
 
+  public int number = 0;
+
+  public String titleString;
+
   public TrayAttr( int icon ) {
     this.icon = icon;
   }
@@ -31,6 +35,12 @@ public class TrayAttr {
   public TrayAttr( int icon, int title, String text ) {
     this.icon = icon;
     this.title = title;
+    this.text = text;
+  }
+  
+  public TrayAttr( int icon, String titleString, String text ) {
+    this.icon = icon;
+    this.titleString = titleString;
     this.text = text;
   }
   

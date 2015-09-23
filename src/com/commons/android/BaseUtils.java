@@ -36,6 +36,7 @@ import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.net.http.AndroidHttpClient;
 import android.provider.Settings.Secure;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationCompat.Builder;
@@ -106,25 +107,18 @@ public class BaseUtils {
     }
   }
 
-  public static JSONObject asJSON( HttpResponse response ) throws Exception {
-    return asJSON( response, false );
-  }
-
-  public static JSONObject asJSON( HttpResponse response, boolean log ) throws Exception {
+  public static JSONObject asJSON( HttpResponse response, boolean... log ) throws Exception {
     return new JSONObject( asString( response, log ) );
   }
 
-  public static String asString( HttpResponse response ) throws Exception {
-    return asString( response, false );
-  }
-
-  public static String asString( HttpResponse response, boolean log ) throws Exception {
-    BufferedReader reader = new BufferedReader( new InputStreamReader( response.getEntity().getContent() ) );
+  public static String asString( HttpResponse response, boolean... log ) throws Exception {
+    if( null == response || null == response.getEntity() ) return null;
+    BufferedReader reader = new BufferedReader( new InputStreamReader( AndroidHttpClient.getUngzippedContent( response.getEntity() ) ) );
     try{
       StringBuilder sb = new StringBuilder();
       String line = null;
       while( null != ( line = reader.readLine() ) ) sb.append( line );
-      if( log ) Logg.i( BaseUtils.class, "lenght = " + sb.length() );
+      if( 1 == log.length && log[ 0 ] ) Logg.i( BaseUtils.class, "lenght = " + sb.length() );
       return sb.toString().trim();
     }finally{
       reader.close();

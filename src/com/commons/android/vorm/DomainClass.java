@@ -162,6 +162,10 @@ public abstract class DomainClass implements Parcelable {
 
   public void completeJson( JSONObject json ) {}
   
+  /**
+   * 
+   * @return the CREATE TABLE sqlite command.
+   */
   public String getCreateSql() {
     return "_id text not null primary key on conflict replace, "
            + "timeStamp integer not null )";
@@ -175,12 +179,23 @@ public abstract class DomainClass implements Parcelable {
    * 
    * @param db
    */
-  public void migrate( SQLiteDatabase db ) {
+  public void migrate( SQLiteDatabase db, boolean dropColumns ) {
     try{
       String n = table( this.getClass() );
       db.execSQL( "alter table " + n + " rename to temp_" + n + ";" );
       db.execSQL( this.getCreateSql() );
-      db.execSQL( "insert into " + n + " select * from temp_" + n + ";" );
+      
+      String copyQ = "insert into " + n + " select * from temp_" + n + ";";
+      if( dropColumns ){
+        StringBuilder cols = new StringBuilder( "_id, timeStamp" );
+        for( Field f : ORMSupport.VIEW_MAP.get( this.getClass() ).keySet() ){
+          if( !f.getName().matches( "(id|date)" ) ) cols.append( ", " ).append( f.getName() );
+        }
+        String c = cols.toString();
+        copyQ = "insert into " + n + " ( " + c + " ) select " + c + " from temp_" + n + ";";
+      }
+      db.execSQL( copyQ );
+      
       db.execSQL( "drop table temp_" + n + ";" );
       Logg.i( this, "migration of " + n + " successful" );
     }catch( SQLException e ){
@@ -265,11 +280,11 @@ public abstract class DomainClass implements Parcelable {
     return 0;
   }
 
-  protected static String now() {
+  public static String now() {
     return NF.format( System.currentTimeMillis() / 1000 );
   }
   
-  protected static String[] nowArr() {
+  public static String[] nowArr() {
     return new String[]{ NF.format( System.currentTimeMillis() / 1000 ) };
   }
   

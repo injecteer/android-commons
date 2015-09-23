@@ -12,6 +12,7 @@ import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
@@ -286,6 +287,15 @@ public abstract class DomainClass implements Parcelable {
   
   public static String[] nowArr() {
     return new String[]{ NF.format( System.currentTimeMillis() / 1000 ) };
+  }
+
+  public static String asInList( Collection<String> vals ) {
+    StringBuilder sb = new StringBuilder();
+    for( String v : vals ){
+      if( 0 != sb.length() ) sb.append( "," );
+      sb.append( "'" ).append( v ).append( "'" );
+    }
+    return sb.toString();
   }
   
 }

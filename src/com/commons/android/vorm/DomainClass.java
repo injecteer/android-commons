@@ -298,4 +298,13 @@ public abstract class DomainClass implements Parcelable {
     return sb.toString();
   }
   
+  public static String asInList( String... vals ) {
+    StringBuilder sb = new StringBuilder();
+    for( String v : vals ){
+      if( 0 != sb.length() ) sb.append( "," );
+      sb.append( "'" ).append( v ).append( "'" );
+    }
+    return sb.toString();
+  }
+  
 }

@@ -243,7 +243,12 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     if( android.R.id.text1 == view.getId() ) doItemClick( position );
   }
 
-  public void doItemClick( int position ) {
+  /**
+   * 
+   * @param position
+   * @return false, if only the textfield is set
+   */
+  public boolean doItemClick( int position ) {
     removeTextWatcher();
     if( null != loader ) loader.setVisibility( View.GONE );
     LocationTuple lt = autocompleteAdapter.getItem( position );
@@ -251,6 +256,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
       setLocationTuple( lt );
     else
       openMap();
+    return false;
   }
   
   protected void pan( final CameraUpdate upd ) {

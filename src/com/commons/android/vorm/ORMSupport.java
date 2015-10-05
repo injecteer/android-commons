@@ -4,18 +4,21 @@ import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPrivate;
 import static java.lang.reflect.Modifier.isTransient;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.json.JSONObject;
 
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -25,6 +28,8 @@ import com.commons.android.SingletonApplicationBase;
 import com.commons.android.vorm.annotation.DrawableRes;
 import com.commons.android.vorm.annotation.Id;
 import com.commons.android.vorm.annotation.NotBlank;
+
+import dalvik.system.DexFile;
 
 public class ORMSupport {
 
@@ -63,6 +68,22 @@ public class ORMSupport {
     for( Class<? extends DomainClass> clazz : classes ) fillMapping( Rid, clazz );
   }
   
+  @SuppressWarnings("unchecked")
+  public static void fillMappings( Class<?> Rid, Context ctx, String pkg ) {
+    try{
+      ClassLoader classLoader = ctx.getClassLoader();
+      DexFile df = new DexFile( ctx.getPackageCodePath() );
+      for (Enumeration<String> iter = df.entries(); iter.hasMoreElements(); ){
+        String name = iter.nextElement();
+        if( !name.startsWith( pkg ) ) continue;
+        Class<?> clazz = classLoader.loadClass( name );
+        if( DomainClass.class.isAssignableFrom( clazz ) ) fillMapping( Rid, (Class<? extends DomainClass>)clazz );
+      }
+    }catch( IOException | ClassNotFoundException e ){
+      Logg.e( ORMSupport.class, "fillMappings() failed", e );
+    }
+  }
+  
   private static void fillMapping( Class<?> Rid, Class<? extends DomainClass> clazz ) {
     Map<Field, Integer> map = new HashMap<>();
     
@@ -81,6 +102,7 @@ public class ORMSupport {
     
     VIEW_MAP.put( clazz, map );
     DOMAIN_CLASSES.put( DomainClass.table( clazz ), clazz );
+    Logg.i( ORMSupport.class, "class added: " + clazz );
   }
 
   private static void eachField( Class<?> Rid, Field f, Map<Field, Integer> map ) {

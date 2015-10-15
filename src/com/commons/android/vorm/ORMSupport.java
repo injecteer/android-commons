@@ -287,7 +287,7 @@ public class ORMSupport {
         if( isTransient( f.getModifiers() ) ) continue;
         
         String n = f.getName();
-        String v = json.has( n ) && !json.isNull( n ) ? json.optString( n ) : null;
+        String v = json.optString( n );
 
         if( BaseUtils.isEmpty( v ) ){
           if( null != f.getAnnotation( NotBlank.class ) ) return null;

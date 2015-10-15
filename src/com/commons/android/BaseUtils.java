@@ -12,10 +12,12 @@ import java.util.Calendar;
 import java.util.Currency;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -31,6 +33,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
@@ -41,6 +45,7 @@ import android.provider.Settings.Secure;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationCompat.Builder;
 import android.util.Base64;
+import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
@@ -145,6 +150,24 @@ public class BaseUtils {
     return Secure.getString( context.getContentResolver(), Secure.ANDROID_ID );
   }
 
+  public static Set<String> getAppLanguages( Context ctx, int id ) {
+    DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
+    Configuration conf = ctx.getResources().getConfiguration();
+    Locale originalLocale = conf.locale;
+    conf.locale = Locale.ENGLISH;
+    final String reference = new Resources( ctx.getAssets(), dm, conf ).getString( id );
+    
+    Set<String> result = new LinkedHashSet<>();
+    result.add( Locale.ENGLISH.getLanguage() );
+    
+    for( Locale loc : Locale.getAvailableLocales() ){
+      conf.locale = loc;
+      if( !reference.equals( new Resources( ctx.getAssets(), dm, conf ).getString( id ) ) ) result.add( loc.getLanguage() );
+    }
+    conf.locale = originalLocale;
+    return result; 
+  }
+  
   public static void hideKeyboard( Activity activity ) {
     InputMethodManager imm = (InputMethodManager)activity.getSystemService( Context.INPUT_METHOD_SERVICE );
     View f = activity.getCurrentFocus();

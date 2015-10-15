@@ -281,17 +281,18 @@ public class ORMSupport {
     try{
       o = clazz.newInstance();
       if( ID_FIELDS.containsKey( clazz ) ) o.id = json.optString( ID_FIELDS.get( clazz ) );
-      
       try{ o.setTimestamp( SDF_FROM_LONG.parse( json.optString( "_timeChanged" ) ) ); }catch( ParseException e1 ){}
-      byte notBlankCount = -1;
       
       for( Field f : VIEW_MAP.get( clazz ).keySet() ){
         if( isTransient( f.getModifiers() ) ) continue;
         
         String n = f.getName();
-        if( null != f.getAnnotation( NotBlank.class ) && -1 == notBlankCount ) notBlankCount = 0;
-        
-        if( !json.has( n ) || json.isNull( n ) ) continue;
+        String v = json.has( n ) && !json.isNull( n ) ? json.optString( n ) : null;
+
+        if( BaseUtils.isEmpty( v ) ){
+          if( null != f.getAnnotation( NotBlank.class ) ) return null;
+          continue;
+        }
         
         if( f.getType().isEnum() ){
           f.set( o, Enum.valueOf( (Class<Enum>)f.getType(), json.optString( n ).toUpperCase() ) );
@@ -300,20 +301,17 @@ public class ORMSupport {
         
         switch( f.getType().getSimpleName().toLowerCase() ){
           case "base64image":
-            f.set( o, new Base64Image( json.optString( n ) ) );
+            f.set( o, new Base64Image( v ) );
             break;
             
           case "date":
-            String ds = json.optString( n );
-            if( !BaseUtils.isEmpty( ds ) ) try{
-              Date d = 10 == ds.length() ? SDF_FROM.parse( ds ) : SDF_FROM_LONG.parse( ds );
+            try{
+              Date d = 10 == v.length() ? SDF_FROM.parse( v ) : SDF_FROM_LONG.parse( v );
               f.set( o, d );
             }catch( ParseException e ){}
             break;
             
           case "string":
-            String v = json.optString( n );
-            if( !BaseUtils.isEmpty( v ) && -1 != notBlankCount ) notBlankCount++;
             f.set( o, v );
             break;
             
@@ -335,7 +333,6 @@ public class ORMSupport {
             break;
         }
       }
-      if( 0 == notBlankCount ) return null;
       o.completeJson( json );
     }catch( InstantiationException | IllegalAccessException e ){
       Logg.e( clazz, "", e );

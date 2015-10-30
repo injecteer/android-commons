@@ -3,55 +3,67 @@ package com.commons.android.geo;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.commons.android.Logg;
-
 import android.content.Context;
 import android.hardware.Sensor;
+import static android.hardware.Sensor.TYPE_ACCELEROMETER;
+import static android.hardware.Sensor.TYPE_ROTATION_VECTOR;
+import static android.hardware.Sensor.TYPE_MAGNETIC_FIELD;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
 
+import com.commons.android.Logg;
+
 public class CompassHelper implements SensorEventListener {
+  
+  private static final float DEFAULT_ALPHA = .3f;
+
+  /*
+   * time smoothing constant for low-pass filter
+   * 0 ≤ alpha ≤ 1 ; a smaller value basically means more smoothing
+   * See: http://en.wikipedia.org/wiki/Low-pass_filter#Discrete-time_realization
+   */
+  private float ALPHA;
 
   private float bearing = 0;
   
   private SensorManager sensorManager;
 
-  private static final int[] SENSORS = { Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_MAGNETIC_FIELD };
+  private static final int[] SENSORS = { TYPE_ROTATION_VECTOR, TYPE_ACCELEROMETER, TYPE_MAGNETIC_FIELD };
   
   public interface OnVectorChanged {
     public void onChange( float bearing );
   }
   
-  private Map<Integer, Tuple> sensorAccuracies = new HashMap<>();
+  private Map<Integer, Tuple> sensors = new HashMap<>();
   
   private OnVectorChanged onVectorChanged = null;
   
-  private float[] valuesAccelerometer = new float[3], valuesMagneticField = new float[3],
-                  matrixR = new float[9], matrixI = new float[9], matrixValues = new float[3];
-  
-  public CompassHelper() {
-    for( int s : SENSORS ) sensorAccuracies.put( s, new Tuple( null, 0 ) );
+  private float[] matrixR = new float[9], matrixI = new float[9], result = new float[3];
+
+  public CompassHelper( float... alpha ) {
+    ALPHA = 1 == alpha.length ? alpha[ 0 ] : DEFAULT_ALPHA;
+    for( int s : SENSORS ) sensors.put( s, new Tuple( null, 0 ) );
   }
-  
+   
   public void startCompass( Context ctx ) {
-    Logg.i( this, "starting..." );
     sensorManager = (SensorManager)ctx.getSystemService( Context.SENSOR_SERVICE );
-    
     for( int s : SENSORS ){
       Sensor sensor = sensorManager.getDefaultSensor( s );
-      sensorAccuracies.get( s ).sensor = sensor;
+      sensors.get( s ).sensor = sensor;
       sensorManager.registerListener( this, sensor, SensorManager.SENSOR_DELAY_NORMAL );
+      if( TYPE_ROTATION_VECTOR == s && null != sensor ) break;
     }
+    Logg.i( this, "started" );
   }
 
   public void stopCompass() {
     if( null == sensorManager ) return;
-    Logg.i( this, "stopping" );
-    for( Tuple t : sensorAccuracies.values() ){
+    for( Tuple t : sensors.values() ){
       if( null != t.sensor ) sensorManager.unregisterListener( this, t.sensor );
     }
+    Logg.i( this, "stopped" );
   }
 
   public float getBearing() {
@@ -68,33 +80,41 @@ public class CompassHelper implements SensorEventListener {
   
   @Override
   public void onSensorChanged( SensorEvent event ) {
-    if( 1 > sensorAccuracies.get( event.sensor.getType() ).accuracy ) return;
+    int type = event.sensor.getType();
+    Tuple tuple = sensors.get( type );
+    if( 1 > tuple.accuracy ) return;
     
-    switch( event.sensor.getType() ){
-      case Sensor.TYPE_ACCELEROMETER:
-        System.arraycopy( event.values, 0, valuesAccelerometer, 0, 3 );
-        break;
-      case Sensor.TYPE_MAGNETIC_FIELD:
-        System.arraycopy( event.values, 0, valuesMagneticField, 0, 3 );
-        break;
-      default: return;
-    }
+    lowPass( event.values, tuple.values );
+
+    if( TYPE_ROTATION_VECTOR == type )
+      SensorManager.getRotationMatrixFromVector( matrixR, tuple.values );
+    else if( !SensorManager.getRotationMatrix( matrixR, matrixI, sensors.get( TYPE_ACCELEROMETER ).values, sensors.get( TYPE_MAGNETIC_FIELD ).values ) )
+      return;
     
-    if( SensorManager.getRotationMatrix( matrixR, matrixI, valuesAccelerometer, valuesMagneticField ) ){
-      SensorManager.getOrientation( matrixR, matrixValues );
-      bearing = (float)Math.toDegrees( matrixValues[ 0 ] );
-      if( null != onVectorChanged ) onVectorChanged.onChange( bearing );
-    }
+    SensorManager.getOrientation( matrixR, result );
+    bearing = (float)Math.toDegrees( result[ 0 ] );
+    if( null != onVectorChanged ) onVectorChanged.onChange( bearing );
   }
 
-  @Override public void onAccuracyChanged( Sensor sensor, int accuracy ) {
+  /**
+   * @see http://en.wikipedia.org/wiki/Low-pass_filter#Algorithmic_implementation
+   * @see http://developer.android.com/reference/android/hardware/SensorEvent.html#values
+   */
+  private void lowPass( float[] input, float[] out ) {
+    if( null == out || null == input ) return;
+    for( int i=0; i < input.length; i++ ) out[ i ] += ALPHA * ( input[ i ] - out[ i ] );
+  }  
+
+  @Override 
+  public void onAccuracyChanged( Sensor sensor, int accuracy ) {
     Logg.i( this, sensor + " -> " + accuracy );
-    sensorAccuracies.get( sensor.getType() ).accuracy = accuracy;
+    sensors.get( sensor.getType() ).accuracy = accuracy;
   }
   
   class Tuple {
     Sensor sensor;
     int accuracy;
+    float[] values = new float[ 9 ];    
     Tuple( Sensor sensor, int accuracy ) {
       this.sensor = sensor;
       this.accuracy = accuracy;

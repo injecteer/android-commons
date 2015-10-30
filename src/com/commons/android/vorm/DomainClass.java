@@ -26,6 +26,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.text.Html;
+import android.text.Html.ImageGetter;
 import android.view.View;
 import android.webkit.WebView;
 import android.widget.TextView;
@@ -62,7 +63,7 @@ public abstract class DomainClass implements Parcelable {
   
   public void fillView( final View v ) {
     if( null != id ) v.setTag( id );
-//    final SingletonApplication app = null != binding && binding.containsKey( "app" ) ? (SingletonApplication)binding.get( "app" ) : null;
+    ImageGetter imageGetter = null != binding && binding.containsKey( "imageGetter" ) ? (ImageGetter)binding.get( "imageGetter" ) : null;
     
     for( Entry<Field, Integer> e : ORMSupport.VIEW_MAP.get( this.getClass() ).entrySet() ){
       Field f = e.getKey();
@@ -84,6 +85,7 @@ public abstract class DomainClass implements Parcelable {
         }else
           trg.setVisibility( View.VISIBLE );
 
+        TextView textView = (TextView)trg;
         switch( f.getType().getSimpleName().toLowerCase() ){
           case "string":
             String s = (String)value;
@@ -96,26 +98,26 @@ public abstract class DomainClass implements Parcelable {
               wv.loadData( s, "text/html", "UTF-8" );
               break;
             }
-            ((TextView)trg).setText( null != f.getAnnotation( HTML.class ) ? Html.fromHtml( s ) : s );
+            textView.setText( null != f.getAnnotation( HTML.class ) ? Html.fromHtml( s, imageGetter, null ) : s );
             break;
             
           case "int":
           case "integer":
           case "long":
-            ((TextView)trg).setText( NF.format( value ) );
+            textView.setText( NF.format( value ) );
             break;
             
           case "float":
           case "double":
             NumberFormat nf = NF_00;
             if( binding.containsKey( "decimalFormat" ) ) nf = (NumberFormat)binding.get( "decimalFormat" );
-            ((TextView)trg).setText( nf.format( value ) );
+            textView.setText( nf.format( value ) );
             break;
             
           case "date":
             SimpleDateFormat sdf = ORMSupport.SDF_DD_MM_YY_TIME;
             if( binding.containsKey( f.getName() ) ) sdf = (SimpleDateFormat)binding.get( f.getName() );
-            ((TextView)trg).setText( sdf.format( (Date)value ) );
+            textView.setText( sdf.format( (Date)value ) );
             break;
           
           case "boolean":

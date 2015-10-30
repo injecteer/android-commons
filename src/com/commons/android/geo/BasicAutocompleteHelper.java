@@ -4,8 +4,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
-import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.text.Editable;
@@ -14,7 +12,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
@@ -22,30 +19,11 @@ import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.commons.android.ActionBarOps;
 import com.commons.android.BaseUtils;
 import com.commons.android.NoOpTextWatcher;
 import com.commons.android.SingletonApplicationBase;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
-import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
-import com.google.android.gms.location.LocationClient;
-import com.google.android.gms.maps.CameraUpdate;
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.GoogleMap.InfoWindowAdapter;
-import com.google.android.gms.maps.GoogleMap.OnInfoWindowClickListener;
-import com.google.android.gms.maps.GoogleMap.OnMapClickListener;
-import com.google.android.gms.maps.GoogleMap.OnMapLongClickListener;
-import com.google.android.gms.maps.MapView;
-import com.google.android.gms.maps.MapsInitializer;
-import com.google.android.gms.maps.UiSettings;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
 
-public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, OnItemClickListener, ConnectionCallbacks, OnConnectionFailedListener {
+public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, OnItemClickListener {
 
   public static final int THRESHOLD = 2;
   
@@ -71,12 +49,6 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   
   private boolean fireOnlyOnAdd = true;
   
-  public MapView mapView;
-  
-  protected GoogleMap map;
-
-  private LocationClient locationClient;
-
   public BasicAutocompleteHelper( SingletonApplicationBase app, Activity activity, int containerId, int clearIconId, int autocompleteId, int progressBarId ) {
     this( app, activity, null, containerId, clearIconId, autocompleteId, progressBarId );
   }
@@ -111,91 +83,6 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     delayedHandler = new DelayedGeocodeHandler( app, this, loader );
   }
 
-  public void initMap( int mapId, final int markerId ) {
-    initMap( mapId, markerId, null );
-  }
-  
-  public void initMap( int mapId, final int markerId, InfoWindowAdapter infoWindowAdapter ) {
-    MapsInitializer.initialize( ctx );
-    
-    mapView = (MapView)( null == root ? ctx.findViewById( mapId ) : root.findViewById( mapId ) );
-    mapView.onCreate( null );
-    map = mapView.getMap();
-    if( null != infoWindowAdapter ) map.setInfoWindowAdapter( infoWindowAdapter );
-    map.setOnInfoWindowClickListener( new OnInfoWindowClickListener() {
-      @Override public void onInfoWindowClick( Marker m ) {
-        if( "...".equals( m.getTitle() ) ) return;
-        closeMap();
-        setClearIconVisible( true );
-        removeTextWatcher();
-        setTargetString( locationTuple.getName().toString() );
-      }
-    } );
-    map.setOnMapClickListener( new OnMapClickListener() {
-      @Override public void onMapClick( final LatLng loc ) {
-        map.clear();
-        locationTuple.clear();
-      }
-    } );
-    map.setOnMapLongClickListener( new OnMapLongClickListener() {
-      @Override public void onMapLongClick( LatLng loc ) {
-        map.clear();
-        locationTuple.setLocation( BaseUtils.toLocation( loc ) );
-        locationTuple.setName( null );
-        final MarkerOptions mo = new MarkerOptions()
-          .icon( BitmapDescriptorFactory.fromResource( markerId ) )
-          .position( loc )
-          .anchor( 0.5f, 1f )
-          .title( "..." );
-        map.addMarker( mo ).showInfoWindow();
-        
-        new GoogleApiReverseGeocodingTask( app, locationTuple, new Runnable() {
-          @Override public void run() {
-            map.clear();
-            String n = locationTuple.getName().toString();
-            if( !BaseUtils.anyEmpty( n ) ){
-              n = BaseUtils.halfLinebreak( n, 22 ); 
-              mo.title( n );
-              map.addMarker( mo ).showInfoWindow();
-            }
-          }
-        } ).execute();
-      }
-    } );
-    UiSettings uiSettings = map.getUiSettings();
-    uiSettings.setZoomControlsEnabled( false );
-    uiSettings.setMyLocationButtonEnabled( true );
-    
-    locationClient = new LocationClient( ctx, this, this ); 
-    locationClient.connect();
-  }
-  
-  private void openMap() {
-    if( null == mapView ) return;
-    clear();
-    ((ActionBarOps)ctx).hideActionBar();
-    map.setMyLocationEnabled( true );
-    mapView.setVisibility( View.VISIBLE );
-    map.clear();
-  }
-  
-  public void closeMap() {
-    if( null == mapView ) return;
-    map.setMyLocationEnabled( false );
-    mapView.setVisibility( View.GONE );
-    ((ActionBarOps)ctx).showActionBar();
-  }
-  
-  public void onResume(){
-    if( null != mapView ) mapView.onResume();
-  }
-
-  public void onPause() {
-    if( null != mapView ) mapView.onPause();
-  }
-  
-  public boolean isMapShowing() { return null != mapView && View.VISIBLE == mapView.getVisibility(); }
-  
   @Override
   public void onTextChanged( CharSequence txt, int start, int before, int count ) {
     String text = txt.toString().trim();
@@ -252,33 +139,10 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     removeTextWatcher();
     if( null != loader ) loader.setVisibility( View.GONE );
     LocationTuple lt = autocompleteAdapter.getItem( position );
-    if( null != lt.getLocation() )
-      setLocationTuple( lt );
-    else
-      openMap();
+    if( null != lt.getLocation() ) setLocationTuple( lt );
     return false;
   }
   
-  protected void pan( final CameraUpdate upd ) {
-    if( null == map ) return;
-    try{
-      map.moveCamera( upd );
-    }catch( IllegalStateException e ){
-      // layout not yet initialized
-      if( mapView.getViewTreeObserver().isAlive() )
-        mapView.getViewTreeObserver().addOnGlobalLayoutListener( new OnGlobalLayoutListener() {
-          @SuppressWarnings("deprecation") @SuppressLint("NewApi") @Override
-          public void onGlobalLayout() {
-            if( Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN )
-              mapView.getViewTreeObserver().removeGlobalOnLayoutListener( this );
-            else
-              mapView.getViewTreeObserver().removeOnGlobalLayoutListener( this );
-            map.moveCamera( upd );
-          } 
-        });
-    }
-  }
-
   @Override public void afterTextChanged( Editable txt ) {}
   @Override public void beforeTextChanged( CharSequence arg0, int arg1, int arg2, int arg3 ) {}
 
@@ -375,15 +239,4 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     setClearIconVisible( false );
   }
 
-  @Override
-  public void onConnected( Bundle arg0 ) {
-    Location loc = locationClient.getLastLocation();
-    LatLng ll = new LatLng( 48.155, 11.5418 );
-    if( null != loc ) ll = BaseUtils.toLatLng( loc );
-    pan( CameraUpdateFactory.newLatLngZoom( ll, 11 ) );
-  }
-
-  @Override public void onDisconnected() {}
-  @Override public void onConnectionFailed( ConnectionResult arg0 ) {}
-  
 }

@@ -51,8 +51,6 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 
-import com.google.android.gms.maps.model.LatLng;
-
 public class BaseUtils {
 
   protected static final DecimalFormatSymbols DECIMAL_FORMAT_SYMBOLS = new DecimalFormatSymbols();
@@ -324,10 +322,6 @@ public class BaseUtils {
     return asString( loc ) + "," + INT_FORMATTER.format( loc.getSpeed() ) + "," + INT_FORMATTER.format( loc.getBearing() );
   }
   
-  public static String asString( LatLng loc ) {
-    return FLOAT_FORMATTER.format( loc.latitude ) + "," + FLOAT_FORMATTER.format( loc.longitude );
-  }
-  
   public static Location locationFromString( String s ) {
     if( anyEmpty( s ) ) return null;
     String[] split = s.split( "," );
@@ -340,17 +334,6 @@ public class BaseUtils {
     }catch( ParseException e ){
     }
     return null;
-  }
-
-  public static LatLng toLatLng( Location loc ) {
-    return new LatLng( loc.getLatitude(), loc.getLongitude() );
-  }
-  
-  public static Location toLocation( LatLng loc ) {
-    Location l = new Location( "" );
-    l.setLatitude( loc.latitude );
-    l.setLongitude( loc.longitude );
-    return l;
   }
 
   public static Date clearTime( Date... d ) {

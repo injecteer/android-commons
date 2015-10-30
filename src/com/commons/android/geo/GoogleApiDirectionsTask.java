@@ -11,7 +11,6 @@ import com.commons.android.BaseUtils;
 import com.commons.android.Logg;
 import com.commons.android.ResponseTuple;
 import com.commons.android.SingletonApplicationBase;
-import com.google.android.gms.maps.model.LatLng;
 
 public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObject> {
 
@@ -19,7 +18,7 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
   
   private Location startLoc;
   
-  private List<LatLng> points;
+  private List<Location> points;
   
   Long start = System.currentTimeMillis();
 
@@ -27,17 +26,17 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
   
   private Runnable onFinish;
 
-  public GoogleApiDirectionsTask( SingletonApplicationBase app, List<LatLng> points ) {
+  public GoogleApiDirectionsTask( SingletonApplicationBase app, List<Location> points ) {
     this.app = app;
     this.points = points;
   }
   
-  public GoogleApiDirectionsTask( SingletonApplicationBase app, List<LatLng> points, Runnable onFinish ) {
+  public GoogleApiDirectionsTask( SingletonApplicationBase app, List<Location> points, Runnable onFinish ) {
     this( app, points );
     this.onFinish = onFinish;
   }
   
-  public GoogleApiDirectionsTask( SingletonApplicationBase app, int minStep, List<LatLng> points, Runnable onFinish ) {
+  public GoogleApiDirectionsTask( SingletonApplicationBase app, int minStep, List<Location> points, Runnable onFinish ) {
     this( app, points, onFinish );
     this.minStep = minStep;
   }
@@ -100,10 +99,11 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
       int dlng = ( ( result & 1 ) != 0 ? ~( result >> 1 ) : ( result >> 1 ) );
       lng += dlng;
 
-      LatLng curr = new LatLng( lat / 100000, lng / 100000 );
-      Location loc = BaseUtils.toLocation( curr );
+      Location loc = new Location( "" );
+      loc.setLatitude( lat / 100000 );
+      loc.setLongitude( lng / 100000 );
       if( minStep <= loc.distanceTo( last ) ){
-        points.add( curr );
+        points.add( loc );
         last = loc;
       }
     }

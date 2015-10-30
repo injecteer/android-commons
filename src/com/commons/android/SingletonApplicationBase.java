@@ -1,9 +1,13 @@
 package com.commons.android;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
@@ -74,15 +78,36 @@ public abstract class SingletonApplicationBase extends Application {
   public ResponseTuple doPost( String url, int timeout, List<NameValuePair> postParams, HttpClient... hc ) throws Exception {
     return doPost( new HttpPost( url ), timeout, postParams, hc );
   }
-
-  public ResponseTuple doGet( String url, int timeout, HttpClient... hc ) throws Exception {
-    HttpClient httpClient = 1 == hc.length ? hc[ 0 ] : getHttpClient();
+  
+  public ResponseTuple doPostStreaming( String url, List<NameValuePair> postParams, int timeout ) throws ClientProtocolException, IOException {
+    HttpClient httpClient = getHttpClient();
     HttpConnectionParams.setConnectionTimeout( httpClient.getParams(), timeout );
-    HttpGet httpget = new HttpGet( url );
-    HttpResponse hr = httpClient.execute( httpget );
-    return new ResponseTuple( hr.getStatusLine().getStatusCode(), BaseUtils.asString( hr ) );
+    HttpPost httppost = new HttpPost( url );
+    httppost.setEntity( new UrlEncodedFormEntity( postParams, HTTP.UTF_8 ) );
+    HttpResponse hr = httpClient.execute( httppost );
+    return new ResponseTuple( hr.getStatusLine().getStatusCode(), hr.getEntity().getContent() );
+  }
+  
+  public ResponseTuple doGet( String url, int timeout, HttpClient... hc ) throws Exception {
+    HttpResponse hr = sendGetRequest( url, timeout );
+    return new ResponseTuple( hr.getStatusLine().getStatusCode(), BaseUtils.asString( hr ), hr.getAllHeaders() );
+  }
+  
+  public ResponseTuple doGetStreaming( String url, int timeout ) throws ClientProtocolException, IOException {
+    HttpResponse hr = sendGetRequest( url, timeout );
+    InputStream stream = 200 == hr.getStatusLine().getStatusCode() ? AndroidHttpClient.getUngzippedContent( hr.getEntity() ) : null;
+    return new ResponseTuple( hr.getStatusLine().getStatusCode(), stream, hr.getAllHeaders() );
   }
 
+  protected HttpResponse sendGetRequest( String url, int timeout, Header... headers ) throws IOException, ClientProtocolException {
+    HttpClient httpClient = getHttpClient();
+    HttpConnectionParams.setConnectionTimeout( httpClient.getParams(), timeout );
+    HttpGet httpget = new HttpGet( url );
+    AndroidHttpClient.modifyRequestToAcceptGzipResponse( httpget );
+    for( Header h : headers ) httpget.addHeader( h );
+    return httpClient.execute( httpget );
+  }
+  
   public boolean showNotification( Intent i, TrayAttr trayAttr, boolean force, int trayId, String fromTray, long[] vibratePattern ) {
     if( !isInBackground && !force ) return false;
     BaseUtils.showNotification( this, i, trayAttr, trayId, fromTray, vibratePattern );

@@ -82,7 +82,7 @@ public class CompassHelper implements SensorEventListener {
   public void onSensorChanged( SensorEvent event ) {
     int type = event.sensor.getType();
     Tuple tuple = sensors.get( type );
-    if( 1 > tuple.accuracy ) return;
+    if( null == tuple || 1 > tuple.accuracy ) return;
     
     lowPass( event.values, tuple.values );
 

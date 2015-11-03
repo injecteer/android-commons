@@ -15,9 +15,14 @@ public class URLDrawable extends BitmapDrawable {
   }
 
   @Override
+  public void setAlpha( int alpha ) {
+    if( null != drawable ) drawable.setAlpha( alpha );
+  }
+
+  @Override
   public void setBounds( int left, int top, int right, int bottom ) {
     super.setBounds( left, top, right, bottom );
-    drawable.setBounds( left, top, right, bottom );
+    if( null != drawable ) drawable.setBounds( left, top, right, bottom );
   }
   
   @Override

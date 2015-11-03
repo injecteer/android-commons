@@ -272,7 +272,7 @@ public abstract class DomainClass implements Parcelable {
     }catch( IOException e ){
     }finally{
       try{
-        oos.close();
+        if( null != oos ) oos.close();
         baos.close();
       }catch( IOException e ){}
     }

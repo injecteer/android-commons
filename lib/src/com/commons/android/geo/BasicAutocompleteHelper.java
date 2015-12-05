@@ -75,7 +75,7 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
     input.setOnTouchListener( this );
     input.setCompoundDrawablePadding( 0 );
     setClearIconVisible( false );
-    
+
     NO_OP_TEXTWATCHER = new NoOpTextWatcher( this );
     
     if( 0 != progressBarId ) loader = container.findViewById( progressBarId );
@@ -210,6 +210,17 @@ public class BasicAutocompleteHelper implements TextWatcher, OnTouchListener, On
   public void setTargetString( String v ) {
     locationTuple.setName( v );
     fillText( v );
+  }
+
+  public void setTargetStringAndFire( String v ) {
+    if( BaseUtils.isEmpty( v ) ){
+      setClearIconVisible( false );
+      return;
+    }
+    locationTuple.setName( v );
+    setClearIconVisible( true );
+    input.setText( "" );
+    input.setText( v );
   }
 
   protected void fillText( CharSequence v ) {

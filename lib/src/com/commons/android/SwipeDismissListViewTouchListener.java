@@ -79,10 +79,9 @@ import android.widget.TextView;
  *
  * <p>
  * For a generalized {@link View.OnTouchListener} that makes any view
- * dismissable, see {@link SwipeDismissTouchListener}.
+ * dismissable.
  * </p>
  *
- * @see SwipeDismissTouchListener
  */
 public class SwipeDismissListViewTouchListener implements View.OnTouchListener {
   // Cached ViewConfiguration and system-wide constant values
@@ -94,18 +93,10 @@ public class SwipeDismissListViewTouchListener implements View.OnTouchListener {
   // Fixed properties
   private ListView                 mListView;
   private DismissCallbacks         mCallbacks;
-  private int                      mViewWidth                = 1;                                  // 1
-                                                                                                    // and
-                                                                                                    // not
-                                                                                                    // 0
-                                                                                                    // to
-                                                                                                    // prevent
-                                                                                                    // dividing
-                                                                                                    // by
-                                                                                                    // zero
+  private int                      mViewWidth                = 1;
 
   // Transient properties
-  private List<PendingDismissData> mPendingDismisses         = new ArrayList<PendingDismissData>();
+  private List<PendingDismissData> mPendingDismisses         = new ArrayList<>();
   private int                      mDismissAnimationRefCount = 0;
   private float                    mDownX;
   private float                    mDownY;

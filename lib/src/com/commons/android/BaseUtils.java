@@ -1,9 +1,46 @@
 package com.commons.android;
 
+import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.res.Configuration;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
+import android.location.Location;
+import android.media.RingtoneManager;
+import android.net.Uri;
+import android.provider.Settings.Secure;
+import android.support.annotation.NonNull;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationCompat.Builder;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.style.ImageSpan;
+import android.util.Base64;
+import android.util.DisplayMetrics;
+import android.view.View;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.TextView;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.FileDescriptor;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.RoundingMode;
+import java.net.HttpURLConnection;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
@@ -18,38 +55,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.message.BasicNameValuePair;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import android.app.Activity;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager.NameNotFoundException;
-import android.content.res.Configuration;
-import android.content.res.Resources;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.location.Location;
-import android.media.RingtoneManager;
-import android.net.Uri;
-import android.net.http.AndroidHttpClient;
-import android.provider.Settings.Secure;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationCompat.Builder;
-import android.util.Base64;
-import android.util.DisplayMetrics;
-import android.view.View;
-import android.view.WindowManager;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.EditText;
+import java.util.zip.GZIPInputStream;
 
 public class BaseUtils {
 
@@ -110,22 +116,31 @@ public class BaseUtils {
     }
   }
 
-  public static JSONObject asJSON( HttpResponse response, boolean... log ) throws Exception {
-    return new JSONObject( asString( response, log ) );
+  public static JSONObject asJSON( HttpURLConnection huc, boolean... log ) throws Exception {
+    return new JSONObject( asString( huc, log ) );
   }
 
-  public static String asString( HttpResponse response, boolean... log ) throws Exception {
-    if( null == response || null == response.getEntity() ) return null;
-    BufferedReader reader = new BufferedReader( new InputStreamReader( AndroidHttpClient.getUngzippedContent( response.getEntity() ) ) );
+  public static String asString( HttpURLConnection huc, boolean... log ) throws Exception {
+    if( null == huc || 200 != huc.getResponseCode() ) return null;
+    BufferedReader reader = new BufferedReader( new InputStreamReader( getUngzippedInputStream( huc ) ) );
     try{
       StringBuilder sb = new StringBuilder();
-      String line = null;
+      String line;
       while( null != ( line = reader.readLine() ) ) sb.append( line );
       if( 1 == log.length && log[ 0 ] ) Logg.i( BaseUtils.class, "lenght = " + sb.length() );
       return sb.toString().trim();
     }finally{
       reader.close();
     }
+  }
+
+  public static InputStream getUngzippedInputStream( HttpURLConnection huc ) throws IOException {
+    InputStream responseStream = huc.getInputStream();
+    if( 200 != huc.getResponseCode() || responseStream == null ) return null;
+    String encoding = huc.getContentEncoding();
+    if( !isEmpty( encoding ) && encoding.contains( "gzip" ) )
+      responseStream = new GZIPInputStream( responseStream );
+    return responseStream;
   }
 
   /**
@@ -222,7 +237,7 @@ public class BaseUtils {
   }
 
   public static String[] convoluteStrings( String... strs ) {
-    Map<String,Integer> freqs = new HashMap<String, Integer>();
+    Map<String,Integer> freqs = new HashMap<>();
     for( String s : strs ){
       for( String p : s.split( "\\s*,\\s*" ) ){
         int freq = freqs.containsKey( p ) ? freqs.get( p ) : 0;
@@ -305,19 +320,26 @@ public class BaseUtils {
 
   public static void a2p( List<NameValuePair> res, String key, Object value ) {
     if( null == key || null == value ) return;
-    String val = null;
+    String val;
     if( Number.class.isAssignableFrom( value.getClass() ) ){
       Number n = (Number)value;
       val = n.floatValue() == n.intValue() ? INT_FORMATTER.format( n ) : FLOAT_FORMATTER.format( n );
     }else
       val = String.class.equals( value.getClass() ) ? (String)value : value.toString();
-    if( !isEmpty( val ) ) res.add( new BasicNameValuePair( key, val ) );
+    if( !isEmpty( val ) ) res.add( new NameValuePair( key, val ) );
   }
+
+  public static String toQuery( List<NameValuePair> params ) {
+    Uri.Builder b = new Uri.Builder();
+    for( NameValuePair p : params ) b.appendQueryParameter( p.getName(), p.getValue() );
+    return b.build().getEncodedQuery();
+  }
+
 
   public static String asString( Location loc ) {
     return FLOAT_FORMATTER.format( loc.getLatitude() ) + "," + FLOAT_FORMATTER.format( loc.getLongitude() );
   }
-  
+
   public static String asStringWithBearing( Location loc ) {
     return asString( loc ) + "," + INT_FORMATTER.format( loc.getSpeed() ) + "," + INT_FORMATTER.format( loc.getBearing() );
   }
@@ -363,4 +385,39 @@ public class BaseUtils {
     return BitmapFactory.decodeFileDescriptor( fileDescriptor, null, options );
   }
 
+  @NonNull
+  public static void setImageSpannable( View v, int imageId, int textId, float... sizeFactor ) {
+    TextView tv = (TextView)v;
+    int iconSize = (int)( tv.getTextSize() * ( 0 == sizeFactor.length ? 1.15 : sizeFactor[ 0 ] ) );
+    tv.setText( getImageSpannable( v.getContext(), imageId, textId, iconSize ) );
+  }
+
+  @NonNull
+  public static void setImageSpannable( View v, int imageId, CharSequence text, float... sizeFactor ) {
+    TextView tv = (TextView)v;
+    int iconSize = (int)( tv.getTextSize() * ( 0 == sizeFactor.length ? 1.15 : sizeFactor[ 0 ] ) );
+    tv.setText( getImageSpannable( v.getContext(), imageId, text, iconSize ) );
+  }
+
+  @NonNull
+  public static CharSequence getImageSpannable( Context ctx, int imageId, int textId, int size ) {
+    if( null == ctx || 0 >= imageId || 0 >= textId ) return "";
+    SpannableStringBuilder sb = new SpannableStringBuilder( "  " );
+    Drawable d = ctx.getResources().getDrawable( imageId );
+    d.setBounds( 0, 0, size, size );
+    sb.setSpan( new ImageSpan( d ), sb.length() - 1, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE );
+    sb.append( " " ).append( ctx.getResources().getText( textId ) );
+    return sb;
+  }
+
+  @NonNull
+  public static CharSequence getImageSpannable( Context ctx, int imageId, CharSequence text, int size ) {
+    if( null == ctx || 0 >= imageId ) return "";
+    SpannableStringBuilder sb = new SpannableStringBuilder( "  " );
+    Drawable d = ctx.getResources().getDrawable( imageId );
+    d.setBounds( 0, 0, size, size );
+    sb.setSpan( new ImageSpan( d ), sb.length() - 1, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE );
+    sb.append( " " ).append( text );
+    return sb;
+  }
 }

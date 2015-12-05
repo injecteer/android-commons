@@ -1,15 +1,15 @@
 package com.commons.android;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-
-import org.apache.http.Header;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class ResponseTuple {
 
@@ -19,25 +19,29 @@ public class ResponseTuple {
   
   private String body;
   
-  private Map<String,String> headers = new HashMap<>();
+  private Map<String, List<String>> headers = new HashMap<>();
   
-  public ResponseTuple( int statusCode, String body, Header... hs ) {
+  public ResponseTuple( int statusCode, String body ) {
     this.statusCode = statusCode;
     this.body = body;
-    addHeaders( hs );
-  }
-  
-  public ResponseTuple( int statusCode, InputStream inputStream, Header... hs ) {
-    this.statusCode = statusCode;
-    this.inputStream = inputStream;
-    addHeaders( hs );
-  }
-  
-  private void addHeaders( Header[] hs ) {
-    for( Header h : hs ) headers.put( h.getName(), h.getValue() );
   }
 
-  public String h( String n ) { return headers.get( n ); }
+  public ResponseTuple( int statusCode, String body, Map<String, List<String>> headers ) {
+    this( statusCode, body );
+    this.headers.putAll( headers );
+  }
+
+  public ResponseTuple( int statusCode, InputStream inputStream ) {
+    this.statusCode = statusCode;
+    this.inputStream = inputStream;
+  }
+
+  public ResponseTuple( int statusCode, InputStream inputStream, Map<String, List<String>> headers ) {
+    this( statusCode, inputStream );
+    this.headers.putAll( headers );
+  }
+
+  public List<String> h( String n ) { return headers.get( n ); }
   
   public int getStatusCode() {
     return statusCode;

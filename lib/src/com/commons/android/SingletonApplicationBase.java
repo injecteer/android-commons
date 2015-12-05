@@ -1,21 +1,5 @@
 package com.commons.android;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.params.ClientPNames;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.protocol.HTTP;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
@@ -24,16 +8,21 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.net.http.AndroidHttpClient;
 import android.preference.PreferenceManager;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.List;
 
 public abstract class SingletonApplicationBase extends Application {
 
   public boolean isInBackground = false;
   
   public long lastForegroundTransition = 0;
-  
-  protected HttpClient httpClient;
   
   protected SQLiteOpenHelper openHelper;
 
@@ -44,68 +33,97 @@ public abstract class SingletonApplicationBase extends Application {
   @Override
   public void onCreate() {
     super.onCreate();
-    try{ Class.forName( "android.os.AsyncTask" ); }catch( ClassNotFoundException e ){}
+    try{ Class.forName( "android.os.AsyncTask" ); }catch( ClassNotFoundException ignored ){}
     prefs = PreferenceManager.getDefaultSharedPreferences( this );
     restoreUserData();
   }
   
   public void restoreUserData() {}  
   
-  public HttpClient getHttpClient() {
-    if( null == httpClient ){
-      httpClient = AndroidHttpClient.newInstance( "Android", this );
-      httpClient.getParams().setBooleanParameter( ClientPNames.HANDLE_REDIRECTS, true );
-    }
-    return httpClient;
-  }
-
   public boolean isAuthenticated() {
     return false;
   }
   
-  public int doPostStatus( String action, int timeout, List<NameValuePair> postParams ) throws Exception {
-    return doPost( new HttpPost( action ), timeout, postParams ).getStatusCode();
+  public int doPostStatus( String url, int timeout, List<NameValuePair> postParams ) throws Exception {
+    HttpURLConnection huc = openConnection( url );
+    huc.setRequestMethod( "POST" );
+    huc.setConnectTimeout( timeout );
+    huc.setDoOutput( false );
+    huc.setDoInput( true );
+
+    BufferedWriter writer = new BufferedWriter( new OutputStreamWriter( huc.getOutputStream(), "UTF-8" ) );
+    writer.write( BaseUtils.toQuery( postParams ) );
+    writer.close();
+    try{
+      huc.connect();
+      return huc.getResponseCode();
+    }finally{
+      huc.disconnect();
+    }
   }
 
-  public ResponseTuple doPost( HttpPost httppost, int timeout, List<NameValuePair> postParams, HttpClient... hc ) throws Exception {
-    HttpClient httpClient = 1 == hc.length ? hc[ 0 ] : getHttpClient();
-    HttpConnectionParams.setConnectionTimeout( httpClient.getParams(), timeout );
-    httppost.setEntity( new UrlEncodedFormEntity( postParams, HTTP.UTF_8 ) );
-    HttpResponse hr = httpClient.execute( httppost );
-    return new ResponseTuple( hr.getStatusLine().getStatusCode(), BaseUtils.asString( hr ) );
+  public ResponseTuple doPost( String url, int timeout, List<NameValuePair> postParams ) throws Exception {
+    HttpURLConnection huc = openConnection( url );
+    huc.setRequestMethod( "POST" );
+    huc.setConnectTimeout( timeout );
+    huc.setDoOutput( true );
+    huc.setDoInput( true );
+
+    BufferedWriter writer = new BufferedWriter( new OutputStreamWriter( huc.getOutputStream(), "UTF-8" ) );
+    writer.write( BaseUtils.toQuery( postParams ) );
+    writer.close();
+
+    try{
+      huc.connect();
+      return new ResponseTuple( huc.getResponseCode(), BaseUtils.asString( huc ) );
+    }finally{
+      huc.disconnect();
+    }
   }
 
-  public ResponseTuple doPost( String url, int timeout, List<NameValuePair> postParams, HttpClient... hc ) throws Exception {
-    return doPost( new HttpPost( url ), timeout, postParams, hc );
-  }
-  
-  public ResponseTuple doPostStreaming( String url, List<NameValuePair> postParams, int timeout ) throws ClientProtocolException, IOException {
-    HttpClient httpClient = getHttpClient();
-    HttpConnectionParams.setConnectionTimeout( httpClient.getParams(), timeout );
-    HttpPost httppost = new HttpPost( url );
-    httppost.setEntity( new UrlEncodedFormEntity( postParams, HTTP.UTF_8 ) );
-    HttpResponse hr = httpClient.execute( httppost );
-    return new ResponseTuple( hr.getStatusLine().getStatusCode(), hr.getEntity().getContent() );
-  }
-  
-  public ResponseTuple doGet( String url, int timeout, HttpClient... hc ) throws Exception {
-    HttpResponse hr = sendGetRequest( url, timeout );
-    return new ResponseTuple( hr.getStatusLine().getStatusCode(), BaseUtils.asString( hr ), hr.getAllHeaders() );
-  }
-  
-  public ResponseTuple doGetStreaming( String url, int timeout ) throws ClientProtocolException, IOException {
-    HttpResponse hr = sendGetRequest( url, timeout );
-    InputStream stream = 200 == hr.getStatusLine().getStatusCode() ? AndroidHttpClient.getUngzippedContent( hr.getEntity() ) : null;
-    return new ResponseTuple( hr.getStatusLine().getStatusCode(), stream, hr.getAllHeaders() );
+  protected HttpURLConnection openConnection( String url ) throws IOException {
+    return (HttpURLConnection)new URL( url ).openConnection();
   }
 
-  protected HttpResponse sendGetRequest( String url, int timeout, Header... headers ) throws IOException, ClientProtocolException {
-    HttpClient httpClient = getHttpClient();
-    HttpConnectionParams.setConnectionTimeout( httpClient.getParams(), timeout );
-    HttpGet httpget = new HttpGet( url );
-    AndroidHttpClient.modifyRequestToAcceptGzipResponse( httpget );
-    for( Header h : headers ) httpget.addHeader( h );
-    return httpClient.execute( httpget );
+  public ResponseTuple doPostStreaming( String url, List<NameValuePair> postParams, int timeout ) throws IOException {
+    HttpURLConnection huc = openConnection( url );
+    huc.setRequestMethod( "POST" );
+    huc.setConnectTimeout( timeout );
+    huc.setDoOutput( true );
+    huc.setDoInput( true );
+
+    BufferedWriter writer = new BufferedWriter( new OutputStreamWriter( huc.getOutputStream(), "UTF-8" ) );
+    writer.write( BaseUtils.toQuery( postParams ) );
+    writer.close();
+
+    huc.connect();
+
+    return new ResponseTuple( huc.getResponseCode(), BaseUtils.getUngzippedInputStream( huc ) );
+  }
+
+  public ResponseTuple doGet( String url, int timeout ) throws Exception {
+    HttpURLConnection huc = sendGetRequest( url, timeout );
+    try{
+      return new ResponseTuple( huc.getResponseCode(), BaseUtils.asString( huc ), huc.getHeaderFields() );
+    }finally{
+      huc.disconnect();
+    }
+  }
+
+  public ResponseTuple doGetStreaming( String url, int timeout ) throws IOException {
+    HttpURLConnection huc = sendGetRequest( url, timeout );
+    return new ResponseTuple( huc.getResponseCode(), BaseUtils.getUngzippedInputStream( huc ), huc.getHeaderFields() );
+  }
+
+  protected HttpURLConnection sendGetRequest( String url, int timeout, NameValuePair... headers ) throws IOException {
+    HttpURLConnection huc = openConnection( url );
+    huc.setRequestMethod( "GET" );
+    huc.setConnectTimeout( timeout );
+    huc.setDoOutput( true );
+    huc.setRequestProperty( "Accept-Encoding", "gzip" );
+    for( NameValuePair h : headers ) huc.setRequestProperty( h.getName(), h.getValue() );
+    huc.connect();
+    return huc;
   }
   
   public boolean showNotification( Intent i, TrayAttr trayAttr, boolean force, int trayId, String fromTray, long[] vibratePattern ) {

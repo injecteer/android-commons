@@ -180,7 +180,8 @@ public abstract class DomainClass implements Parcelable {
    * 3. copy data temp_[name] => [name]
    * 4. drop temp_[name] table 
    * 
-   * @param db
+   * @param db - DB instance
+   * @param dropColumns - if the columns should be dropped
    */
   public void migrate( SQLiteDatabase db, boolean dropColumns ) {
     try{
@@ -288,7 +289,7 @@ public abstract class DomainClass implements Parcelable {
   }
   
   public static String[] nowArr() {
-    return new String[]{ NF.format( System.currentTimeMillis() / 1000 ) };
+    return new String[]{ now() };
   }
 
   public static String asInList( Collection<String> vals ) {

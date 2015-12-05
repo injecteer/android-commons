@@ -54,6 +54,6 @@ public class GoogleApiReverseGeocodingTask extends AsyncTask<Void, Void, Void> {
   @Override
   protected void onPostExecute( Void result ) {
     if( null != action ) action.run();
-  };
+  }
 
 }

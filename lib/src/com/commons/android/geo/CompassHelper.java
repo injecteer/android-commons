@@ -33,7 +33,7 @@ public class CompassHelper implements SensorEventListener {
   private static final int[] SENSORS = { TYPE_ROTATION_VECTOR, TYPE_ACCELEROMETER, TYPE_MAGNETIC_FIELD };
   
   public interface OnVectorChanged {
-    public void onChange( float bearing );
+    void onChange( float bearing );
   }
   
   private Map<Integer, Tuple> sensors = new HashMap<>();
@@ -74,8 +74,10 @@ public class CompassHelper implements SensorEventListener {
     if( !loc.hasBearing() ) loc.setBearing( bearing );
   }
   
-  public void setOnVectorChanged( OnVectorChanged onVectorChanged ) {
+  public void setOnVectorChanged( Context ctx, OnVectorChanged onVectorChanged ) {
+    boolean wasNull = null == this.onVectorChanged;
     this.onVectorChanged = onVectorChanged;
+    if( wasNull && null != onVectorChanged ) startCompass( ctx );
   }
   
   @Override

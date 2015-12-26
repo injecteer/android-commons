@@ -15,6 +15,7 @@ import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -59,7 +60,7 @@ public abstract class DomainClass implements Parcelable {
   // time in seconds, millis / 1000
   public long timeStamp;
 
-  public transient Map<String,Object> binding = Collections.emptyMap();
+  public transient Map<String,Object> binding = new HashMap<>();
   
   public void fillView( final View v ) {
     if( null != id ) v.setTag( id );

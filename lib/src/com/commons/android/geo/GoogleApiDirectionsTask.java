@@ -52,7 +52,7 @@ public class GoogleApiDirectionsTask extends AsyncTask<Location, Void, JSONObjec
     
     try{
       Logg.i( this, "url " + url );
-      ResponseTuple rt = app.doGet( url, 4000 );
+      ResponseTuple rt = app.doGet( url, 4000, false );
       if( 200 == rt.getStatusCode() ) return rt.getJson();
     }catch( Exception e ){
       e.printStackTrace();

@@ -33,7 +33,7 @@ public class GoogleApiReverseGeocodingTask extends AsyncTask<Void, Void, Void> {
   protected Void doInBackground( Void... params ) {
     try{
       String latlng = URLEncoder.encode( BaseUtils.asString( locTuple.getLocation() ), "UTF-8" );
-      ResponseTuple rt = app.doGet( "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + latlng + "&language=" + lang, 3000 );
+      ResponseTuple rt = app.doGet( "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + latlng + "&language=" + lang, 3000, false );
       if( 200 != rt.getStatusCode() ) return null;
       JSONObject json = rt.getJson();
       if( null == json || !"ok".equalsIgnoreCase( json.optString( "status" ) ) ) return null;

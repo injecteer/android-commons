@@ -12,7 +12,6 @@ import android.preference.PreferenceManager;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -38,14 +37,14 @@ public abstract class SingletonApplicationBase extends Application {
     restoreUserData();
   }
   
-  public void restoreUserData() {}  
-  
+  public void restoreUserData() {}
+
   public boolean isAuthenticated() {
     return false;
   }
-  
+
   public int doPostStatus( String url, int timeout, List<NameValuePair> postParams ) throws Exception {
-    HttpURLConnection huc = openConnection( url );
+    HttpURLConnection huc = openConnection( url, timeout );
     huc.setRequestMethod( "POST" );
     huc.setConnectTimeout( timeout );
     huc.setDoOutput( false );
@@ -63,7 +62,7 @@ public abstract class SingletonApplicationBase extends Application {
   }
 
   public ResponseTuple doPost( String url, int timeout, List<NameValuePair> postParams ) throws Exception {
-    HttpURLConnection huc = openConnection( url );
+    HttpURLConnection huc = openConnection( url, timeout );
     huc.setRequestMethod( "POST" );
     huc.setConnectTimeout( timeout );
     huc.setDoOutput( true );
@@ -81,15 +80,16 @@ public abstract class SingletonApplicationBase extends Application {
     }
   }
 
-  protected HttpURLConnection openConnection( String url ) throws IOException {
-    return (HttpURLConnection)new URL( url ).openConnection();
+  protected HttpURLConnection openConnection( String url, int timeout ) throws IOException {
+    HttpURLConnection huc = ( HttpURLConnection )new URL( url ).openConnection();
+    huc.setConnectTimeout( timeout );
+    huc.setDoOutput( true );
+    return huc;
   }
 
   public ResponseTuple doPostStreaming( String url, List<NameValuePair> postParams, int timeout ) throws IOException {
-    HttpURLConnection huc = openConnection( url );
+    HttpURLConnection huc = openConnection( url, timeout );
     huc.setRequestMethod( "POST" );
-    huc.setConnectTimeout( timeout );
-    huc.setDoOutput( true );
     huc.setDoInput( true );
 
     BufferedWriter writer = new BufferedWriter( new OutputStreamWriter( huc.getOutputStream(), "UTF-8" ) );
@@ -102,30 +102,67 @@ public abstract class SingletonApplicationBase extends Application {
   }
 
   public ResponseTuple doGet( String url, int timeout ) throws Exception {
-    HttpURLConnection huc = sendGetRequest( url, timeout );
+    return doGet( url, timeout, true );
+  }
+
+  public ResponseTuple doGet( String url, int timeout, boolean lastModified ) throws Exception {
+    HUCTuple ht = sendGetRequest( url, timeout, lastModified );
     try{
-      return new ResponseTuple( huc.getResponseCode(), BaseUtils.asString( huc ), huc.getHeaderFields() );
+      return new ResponseTuple( ht.responseCode, 200 == ht.responseCode ? BaseUtils.asString( ht.huc ) : null, ht.huc.getHeaderFields() );
     }finally{
-      huc.disconnect();
+      ht.huc.disconnect();
     }
   }
 
   public ResponseTuple doGetStreaming( String url, int timeout ) throws IOException {
-    HttpURLConnection huc = sendGetRequest( url, timeout );
-    return new ResponseTuple( huc.getResponseCode(), BaseUtils.getUngzippedInputStream( huc ), huc.getHeaderFields() );
+    return doGetStreaming( url, timeout, true );
   }
 
-  protected HttpURLConnection sendGetRequest( String url, int timeout, NameValuePair... headers ) throws IOException {
-    HttpURLConnection huc = openConnection( url );
+  public ResponseTuple doGetStreaming( String url, int timeout, boolean lastModified ) throws IOException {
+    HUCTuple ht = sendGetRequest( url, timeout, lastModified );
+    return new ResponseTuple( ht.responseCode, 200 == ht.responseCode ? BaseUtils.getUngzippedInputStream( ht.huc ) : null, ht.huc.getHeaderFields() );
+  }
+
+  protected HUCTuple sendGetRequest( String url, int timeout, boolean lastModified, NameValuePair... headers ) throws IOException {
+    HttpURLConnection huc = openConnection( url, timeout );
     huc.setRequestMethod( "GET" );
-    huc.setConnectTimeout( timeout );
-    huc.setDoOutput( true );
+
+    String ifModSince = null;
+    if( lastModified ){
+      ifModSince = prefs.getString( "url_" + url, "0" );
+      huc.setRequestProperty( "If-Modified-Since", ifModSince );
+    }
+
     huc.setRequestProperty( "Accept-Encoding", "gzip" );
     for( NameValuePair h : headers ) huc.setRequestProperty( h.getName(), h.getValue() );
     huc.connect();
-    return huc;
+
+    String lastModHeader = huc.getHeaderField( "Last-Modified" );
+    if( lastModified && null != lastModHeader ){
+      savePref( "url_" + url, lastModHeader );
+      if( lastModHeader.equalsIgnoreCase( ifModSince ) ) return new HUCTuple( 304, huc );
+    }
+
+    return new HUCTuple( huc.getResponseCode(), huc );
   }
-  
+
+  public static class HUCTuple{
+    public HttpURLConnection huc;
+    public final int responseCode;
+    public HUCTuple( int responseCode, HttpURLConnection huc ) {
+      this.responseCode = responseCode;
+      this.huc = huc;
+    }
+  }
+
+  public void savePref( String key, String val ) {
+    prefs.edit().putString( key, val ).apply();
+  }
+
+  public void savePref( String key, long val ) {
+    prefs.edit().putLong( key, val ).apply();
+  }
+
   public boolean showNotification( Intent i, TrayAttr trayAttr, boolean force, int trayId, String fromTray, long[] vibratePattern ) {
     if( !isInBackground && !force ) return false;
     BaseUtils.showNotification( this, i, trayAttr, trayId, fromTray, vibratePattern );

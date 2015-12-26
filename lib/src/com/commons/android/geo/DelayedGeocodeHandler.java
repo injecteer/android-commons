@@ -89,7 +89,7 @@ public class DelayedGeocodeHandler extends Handler {
     protected JSONObject doInBackground( String... params ) {
       try{
         String addr = URLEncoder.encode( params[ 0 ], "UTF-8" );
-        ResponseTuple rt = app.doGet( "http://maps.google.com/maps/api/geocode/json?sensor=true&address=" + addr + "&language=" + defaultLoc.getLanguage(), 3000 );
+        ResponseTuple rt = app.doGet( "http://maps.google.com/maps/api/geocode/json?sensor=true&address=" + addr + "&language=" + defaultLoc.getLanguage(), 3000, false );
         if( 200 == rt.getStatusCode() ) return rt.getJson();
       }catch( Exception e ){
         Logg.e( this, "", e );

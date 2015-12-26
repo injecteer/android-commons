@@ -135,8 +135,9 @@ public class BaseUtils {
   }
 
   public static InputStream getUngzippedInputStream( HttpURLConnection huc ) throws IOException {
+    if( null == huc || 200 != huc.getResponseCode() ) return null;
     InputStream responseStream = huc.getInputStream();
-    if( 200 != huc.getResponseCode() || responseStream == null ) return null;
+    if( responseStream == null ) return null;
     String encoding = huc.getContentEncoding();
     if( !isEmpty( encoding ) && encoding.contains( "gzip" ) )
       responseStream = new GZIPInputStream( responseStream );
@@ -417,7 +418,7 @@ public class BaseUtils {
     Drawable d = ctx.getResources().getDrawable( imageId );
     d.setBounds( 0, 0, size, size );
     sb.setSpan( new ImageSpan( d ), sb.length() - 1, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE );
-    sb.append( " " ).append( text );
+    if( !isEmpty( text ) ) sb.append( " " ).append( text );
     return sb;
   }
 }

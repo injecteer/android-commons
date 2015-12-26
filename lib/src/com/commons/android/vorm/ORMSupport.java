@@ -209,9 +209,11 @@ public class ORMSupport {
 
   public static long count( String q, String... args ){
     Cursor c = db.rawQuery( q, args );
+    long res = 0;
     try{
-      return c.moveToNext() ? c.getLong( 0 ) : 0;
+      if( c.moveToFirst() ) res = c.getLong( 0 );
     }finally{ c.close(); }
+    return res;
   }
 
   public static <T extends DomainClass> long count( Class<T> clazz ){
@@ -230,7 +232,22 @@ public class ORMSupport {
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public static <T extends DomainClass> T fromSql( Class<T> clazz, Cursor cursor, String... prefs ) {
-    String prefix = 1 == prefs.length ? prefs[ 0 ] : "";
+    String prefix = "";
+    Set<String> filter = null;
+    if( 0 < prefs.length ){
+      prefix = prefs[ 0 ];
+      if( 1 < prefs.length ){
+        filter = new HashSet<>( prefs.length - 1 );
+        boolean firstSkipped = false;
+        for( String p : prefs ){
+          if( !firstSkipped ){
+            firstSkipped = true;
+            continue;
+          }
+          filter.add( p );
+        }
+      }
+    }
     T o = null;
     try{
       o = clazz.newInstance();
@@ -242,6 +259,7 @@ public class ORMSupport {
 
       for( Field f : VIEW_MAP.get( clazz ).keySet() ){
         if( isTransient( f.getModifiers() ) ) continue;
+        if( null != filter && !filter.contains( f.getName() ) ) continue;
         int ix = cursor.getColumnIndex( prefix + f.getName() );
         if( -1 == ix || cursor.isNull( ix ) ) continue;
 

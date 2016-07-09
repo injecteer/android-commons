@@ -25,8 +25,6 @@ public abstract class SingletonApplicationBase extends Application {
   
   protected SQLiteOpenHelper openHelper;
 
-  public boolean loggedIn = false;
-
   public SharedPreferences prefs;
 
   @Override
@@ -80,7 +78,7 @@ public abstract class SingletonApplicationBase extends Application {
     }
   }
 
-  protected HttpURLConnection openConnection( String url, int timeout ) throws IOException {
+  public HttpURLConnection openConnection( String url, int timeout ) throws IOException {
     HttpURLConnection huc = ( HttpURLConnection )new URL( url ).openConnection();
     huc.setConnectTimeout( timeout );
     huc.setDoOutput( true );
@@ -196,7 +194,7 @@ public abstract class SingletonApplicationBase extends Application {
   }
 
   public void clearAuthData() {
-    prefs.edit().clear().commit();
+    prefs.edit().clear().apply();
   }
 
   public static class FinishingListener implements DialogInterface.OnClickListener {

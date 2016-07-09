@@ -1,16 +1,5 @@
 package com.commons.android.geo;
 
-import java.net.URLEncoder;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -22,6 +11,17 @@ import com.commons.android.Logg;
 import com.commons.android.ResponseTuple;
 import com.commons.android.SingletonApplicationBase;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
 public class DelayedGeocodeHandler extends Handler {
   
   public static final int MESSAGE_TEXT_CHANGED = 0;
@@ -30,6 +30,7 @@ public class DelayedGeocodeHandler extends Handler {
   
   static{
     COMPONENTS.put( "locality", "" );
+    COMPONENTS.put( "sublocality", "" );
     COMPONENTS.put( "street_address", "" );
     COMPONENTS.put( "street_number", "" );
     COMPONENTS.put( "route", "" );
@@ -42,20 +43,24 @@ public class DelayedGeocodeHandler extends Handler {
   private BasicAutocompleteHelper helper;
   
   private View progressBar;
-  
+
+  private GoogleApiGeocodingTask task;
+
   public DelayedGeocodeHandler( SingletonApplicationBase app, BasicAutocompleteHelper helper, View progressBar ) {
     super();
     this.app = app;
     this.helper = helper;
     this.progressBar = progressBar;
   }
-  
+
   @Override
   public void handleMessage( Message msg ) {
     if( msg.what != MESSAGE_TEXT_CHANGED ) return;
     String addr = (String)msg.obj;
     if( null != progressBar ) progressBar.setVisibility( View.VISIBLE );
-    new GoogleApiGeocodingTask().execute( addr );
+    if( null != task && !task.isCancelled() ) task.cancel( true );
+    task = new GoogleApiGeocodingTask();
+    task.execute( addr );
   }
 
   public static String prettyAddress( JSONObject obj ) {
@@ -69,12 +74,16 @@ public class DelayedGeocodeHandler extends Handler {
         if( types.contains( "\"" + e.getKey() + "\"" ) ) e.setValue( comp.optString( "long_name" ) );
       }
     }
+
     String addr = m.get( "street_address" ) + " " + m.get( "route" ) + " " + m.get( "street_number" );
     addr = addr.trim();
-    String cityZip = m.get( "postal_code" ) + " " + m.get( "locality" );
-    if( BaseUtils.isEmpty( addr ) ) cityZip += ", " + m.get( "country" ); 
+    String cityZip = m.get( "postal_code" );
+    if( BaseUtils.isEmpty( addr ) ) cityZip += " " + m.get( "sublocality" );
+    cityZip += " " + m.get( "locality" );
     cityZip = cityZip.trim();
-    return addr + ( BaseUtils.allNotEmpty( addr, cityZip ) ? ", " : "" ) + cityZip; 
+
+    if( !BaseUtils.isEmpty( addr ) ) return addr + ", " + cityZip;
+    else return cityZip + ", " + m.get( "country" );
   }
 
   class GoogleApiGeocodingTask extends AsyncTask<String, Void, JSONObject>{
@@ -89,14 +98,16 @@ public class DelayedGeocodeHandler extends Handler {
     protected JSONObject doInBackground( String... params ) {
       try{
         String addr = URLEncoder.encode( params[ 0 ], "UTF-8" );
-        ResponseTuple rt = app.doGet( "http://maps.google.com/maps/api/geocode/json?sensor=true&address=" + addr + "&language=" + defaultLoc.getLanguage(), 3000, false );
+        String url = "http://maps.google.com/maps/api/geocode/json?sensor=true&address=" + addr + "&language=" + defaultLoc.getLanguage();
+        ResponseTuple rt = app.doGet( url, 1000, false );
+        Logg.i( this, "url=" + url + " code -> " + rt.getStatusCode() );
         if( 200 == rt.getStatusCode() ) return rt.getJson();
       }catch( Exception e ){
         Logg.e( this, "", e );
       }
       return null;
     }
-    
+
     @Override
     protected void onPostExecute( JSONObject json ) {
       try{
@@ -114,7 +125,8 @@ public class DelayedGeocodeHandler extends Handler {
           String addr = prettyAddress( obj );
           if( !BaseUtils.isEmpty( addr ) && uniques.add( addr ) ) helper.add( l, addr );
         }
-//        Logg.e( this, "got " + uniques + " results in " + ( System.currentTimeMillis() - start ) + " ms" );
+        helper.show();
+        Logg.i( this, "got " + uniques + " results in " + ( System.currentTimeMillis() - start ) + " ms" );
       }catch( Exception e ){
         Logg.e( this, "", e );
       }finally{

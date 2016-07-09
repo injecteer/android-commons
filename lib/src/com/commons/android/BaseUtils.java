@@ -1,5 +1,6 @@
 package com.commons.android;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -7,17 +8,22 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.provider.Settings.Secure;
+import android.support.annotation.IdRes;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationCompat.Builder;
 import android.text.Spannable;
@@ -29,6 +35,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.json.JSONException;
@@ -69,6 +76,8 @@ public class BaseUtils {
 
   public static final NumberFormat PRICE_FORMATTER = NumberFormat.getCurrencyInstance( Locale.getDefault() );
 
+  public static final NumberFormat SCORE_FORMATTER = NumberFormat.getInstance( Locale.getDefault() );
+
   public static int NOTIFICATION_LIGHTS;
   
   static{
@@ -79,6 +88,8 @@ public class BaseUtils {
     INT_FORMATTER.setGroupingUsed( false );
     PRICE_FORMATTER.setMaximumFractionDigits( 2 );
     PRICE_FORMATTER.setRoundingMode( RoundingMode.FLOOR );
+    SCORE_FORMATTER.setMaximumFractionDigits( 1 );
+    SCORE_FORMATTER.setRoundingMode( RoundingMode.FLOOR );
   }
   
   public static String formatPrice( Number price, String currencyStr ) {
@@ -232,7 +243,7 @@ public class BaseUtils {
       }
     }
     
-    PendingIntent contentIntent = PendingIntent.getActivity( ctx, rnd .nextInt(), notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT );
+    PendingIntent contentIntent = PendingIntent.getActivity( ctx, rnd.nextInt(), notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT );
     builder.setContentIntent( contentIntent );
     return builder;
   }
@@ -354,8 +365,7 @@ public class BaseUtils {
       loc.setLatitude( (double)FLOAT_FORMATTER.parse( split[ 0 ] ) );
       loc.setLongitude( (double)FLOAT_FORMATTER.parse( split[ 1 ] ) );
       return loc;
-    }catch( ParseException e ){
-    }
+    }catch( ParseException ignored ){}
     return null;
   }
 
@@ -368,23 +378,61 @@ public class BaseUtils {
     return c.getTime();
   }
 
-  public static Bitmap decodeBitmapFromFile( String filename ) {
+  public static Bitmap decodeBitmapFromFile( String filename, int longest ) {
     final BitmapFactory.Options options = new BitmapFactory.Options();
     options.inJustDecodeBounds = true;
     BitmapFactory.decodeFile( filename, options );
-  
+
+    options.inSampleSize = calculateInSampleSize( options, longest );
+
     options.inJustDecodeBounds = false;
     return BitmapFactory.decodeFile( filename, options );
   }
 
-  public static Bitmap decodeBitmapFromDescriptor( FileDescriptor fileDescriptor ) {
+  public static Bitmap decodeBitmapFromDescriptor( FileDescriptor fileDescriptor, int longest ) {
     final BitmapFactory.Options options = new BitmapFactory.Options();
     options.inJustDecodeBounds = true;
     BitmapFactory.decodeFileDescriptor( fileDescriptor, null, options );
-  
+
+    options.inSampleSize = calculateInSampleSize( options, longest );
+
     options.inJustDecodeBounds = false;
     return BitmapFactory.decodeFileDescriptor( fileDescriptor, null, options );
   }
+
+  /**
+   *
+   * https://developer.android.com/samples/DisplayingBitmaps/src/com.example.android.displayingbitmaps/util/ImageResizer.html
+   *
+   * @param options
+   * @param longest
+   * @return
+   */
+  public static int calculateInSampleSize( BitmapFactory.Options options, int longest ) {
+    final int height = options.outHeight;
+    final int width = options.outWidth;
+    int inSampleSize = 1;
+
+    if( height > width )
+      longest = (int) (1.0f * longest * height / width);
+    else
+      longest = (int) (1.0f * longest * width / height);
+
+    if( height > longest || width > longest ){
+      while( ( ( height >> 1 ) / inSampleSize ) > longest && ( ( width >> 1 ) / inSampleSize ) > longest ){
+        inSampleSize <<= 1;
+      }
+
+      final long totalReqPixelsCap = longest * longest * 2;
+
+      for( long totalPixels = width * height / inSampleSize; totalPixels > totalReqPixelsCap; ){
+        inSampleSize <<= 1;
+        totalPixels >>= 1;
+      }
+    }
+    return inSampleSize;
+  }
+
 
   @NonNull
   public static void setImageSpannable( View v, int imageId, int textId, float... sizeFactor ) {
@@ -420,5 +468,37 @@ public class BaseUtils {
     sb.setSpan( new ImageSpan( d ), sb.length() - 1, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE );
     if( !isEmpty( text ) ) sb.append( " " ).append( text );
     return sb;
+  }
+
+  public static void grayscale( View parent, @IdRes int id ) {
+    ImageView iv = (ImageView)parent.findViewById( id );
+    ColorMatrix matrix = new ColorMatrix();
+    matrix.setSaturation( 0 );  //0 means grayscale
+    ColorMatrixColorFilter cf = new ColorMatrixColorFilter( matrix );
+    iv.setColorFilter( cf );
+    iv.setAlpha( 128 );
+  }
+
+  public static Drawable grayscale( Drawable d ) {
+    ColorMatrix matrix = new ColorMatrix();
+    matrix.setSaturation( 0 );  //0 means grayscale
+    ColorMatrixColorFilter cf = new ColorMatrixColorFilter( matrix );
+    d.setColorFilter( cf );
+    d.setAlpha( 128 );
+    return d;
+  }
+
+  private static final int REQUEST_EXTERNAL_STORAGE = 1;
+
+  private static String[] PERMISSIONS_STORAGE = {
+      Manifest.permission.READ_EXTERNAL_STORAGE,
+      Manifest.permission.WRITE_EXTERNAL_STORAGE
+  };
+
+  public static void verifyStoragePermissions( Activity activity ) {
+    int permission = ActivityCompat.checkSelfPermission( activity, Manifest.permission.WRITE_EXTERNAL_STORAGE );
+
+    if( PackageManager.PERMISSION_GRANTED != permission )
+      ActivityCompat.requestPermissions( activity, PERMISSIONS_STORAGE, REQUEST_EXTERNAL_STORAGE );
   }
 }

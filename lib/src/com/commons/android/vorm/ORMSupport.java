@@ -19,7 +19,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -82,9 +81,7 @@ public class ORMSupport {
         Class<?> clazz = classLoader.loadClass( name );
         if( DomainClass.class.isAssignableFrom( clazz ) ) fillMapping( Rid, (Class<? extends DomainClass>)clazz );
       }
-    }catch( IOException e ){
-      Logg.e( ORMSupport.class, "fillMappings() failed", e );
-    }catch( ClassNotFoundException e ){
+    }catch( IOException | ClassNotFoundException e ){
       Logg.e( ORMSupport.class, "fillMappings() failed", e );
     }
   }
@@ -103,7 +100,7 @@ public class ORMSupport {
     }
     try{
       map.put( DomainClass.class.getDeclaredField( "date" ), Rid.getDeclaredField( "dateView" ).getInt( null ) );
-    }catch( Exception e ){}
+    }catch( Exception ignored ){}
 
     VIEW_MAP.put( clazz, map );
     DOMAIN_CLASSES.put( DomainClass.table( clazz ), clazz );
@@ -135,8 +132,8 @@ public class ORMSupport {
     }finally{ c.close(); }
   }
 
-  public static <T extends DomainClass> T get( Class<T> clazz, String val ){
-    return findBy( clazz, "_id", val );
+  public static <T extends DomainClass> T get( Class<T> clazz, long val ){
+    return findBy( clazz, "_id", DomainClass.NF.format( val ) );
   }
 
   public static <T extends DomainClass> T findBySafe( Class<T> clazz, String name, String... val ){
@@ -145,7 +142,7 @@ public class ORMSupport {
     if( null == o )
       try{
         o = clazz.newInstance();
-      }catch( InstantiationException e ){}catch( IllegalAccessException e ){}
+      }catch( InstantiationException ignored ){}catch( IllegalAccessException e ){}
     return o;
   }
 
@@ -252,7 +249,7 @@ public class ORMSupport {
     try{
       o = clazz.newInstance();
       int idIx = cursor.getColumnIndex( prefix + "_id" );
-      if( -1 < idIx ) o.id = cursor.getString( idIx );
+      if( -1 < idIx ) o.id = cursor.getLong( idIx );
 
       int tsIx = cursor.getColumnIndex( prefix + "timeStamp" );
       if( -1 < tsIx ) o.setTimestamp( cursor.getLong( tsIx ) );
@@ -306,7 +303,7 @@ public class ORMSupport {
     T o = null;
     try{
       o = clazz.newInstance();
-      if( ID_FIELDS.containsKey( clazz ) ) o.id = json.optString( ID_FIELDS.get( clazz ) );
+      if( ID_FIELDS.containsKey( clazz ) ) o.id = json.optLong( ID_FIELDS.get( clazz ) );
       try{ o.setTimestamp( SDF_FROM_LONG.parse( json.optString( "_timeChanged" ) ) ); }catch( ParseException e1 ){}
 
       for( Field f : VIEW_MAP.get( clazz ).keySet() ){

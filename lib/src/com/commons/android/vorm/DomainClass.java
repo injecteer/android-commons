@@ -1,31 +1,8 @@
 package com.commons.android.vorm;
 
-import static java.text.DateFormat.SHORT;
-import static java.text.DateFormat.getDateInstance;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.math.RoundingMode;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
-import java.text.SimpleDateFormat;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import org.json.JSONObject;
-
 import android.content.ContentValues;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.Parcel;
-import android.os.Parcelable;
 import android.text.Html;
 import android.text.Html.ImageGetter;
 import android.view.View;
@@ -37,7 +14,24 @@ import com.commons.android.Logg;
 import com.commons.android.vorm.annotation.DrawableRes;
 import com.commons.android.vorm.annotation.HTML;
 
-public abstract class DomainClass implements Parcelable {
+import org.json.JSONObject;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import static java.text.DateFormat.SHORT;
+import static java.text.DateFormat.getDateInstance;
+
+public abstract class DomainClass {
 
   public static final NumberFormat NF = new DecimalFormat();
   public static final NumberFormat NF_00 = new DecimalFormat();
@@ -53,7 +47,7 @@ public abstract class DomainClass implements Parcelable {
   
   public static final String[] EMPTY_ARGS = {};
 
-  public String id;
+  public Long id;
   
   public Date date;
   
@@ -61,7 +55,7 @@ public abstract class DomainClass implements Parcelable {
   public long timeStamp;
 
   public transient Map<String,Object> binding = new HashMap<>();
-  
+
   public void fillView( final View v ) {
     if( null != id ) v.setTag( id );
     ImageGetter imageGetter = null != binding && binding.containsKey( "imageGetter" ) ? (ImageGetter)binding.get( "imageGetter" ) : null;
@@ -146,13 +140,20 @@ public abstract class DomainClass implements Parcelable {
   public void afterLoad() {}
   
   public int delete( SQLiteDatabase db ) {
-    return db.delete( table( getClass() ), "_id=?", new String[]{ id } );
+    return db.delete( table( getClass() ), "_id=?", new String[]{ NF.format( id ) } );
   }
   
   public boolean save() {
-    long nid = ORMSupport.dbw().insert( table( this.getClass() ), null, asContentValues() );
-    if( -1 != nid ){
-      if( BaseUtils.isEmpty( id ) ) id = NF.format( nid );
+    String table = table( this.getClass() );
+    ContentValues cv = asContentValues();
+    if( null == id ){
+      long nid = ORMSupport.dbw().insert( table, null, cv );
+      if( -1 != nid ){
+        id = nid;
+        return true;
+      }
+    }else{
+      ORMSupport.dbw().update( table, cv, "_id=?", new String[]{ NF.format( id ) } );
       return true;
     }
     return false;
@@ -171,8 +172,8 @@ public abstract class DomainClass implements Parcelable {
    * @return the CREATE TABLE sqlite command.
    */
   public String getCreateSql() {
-    return "_id text not null primary key on conflict replace, "
-           + "timeStamp integer not null )";
+    return "_id INTEGER PRIMARY KEY AUTOINCREMENT, "
+           + "timeStamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP );";
   }
   
   /**
@@ -216,9 +217,8 @@ public abstract class DomainClass implements Parcelable {
   @SuppressWarnings("rawtypes")
   public ContentValues asContentValues(){
     ContentValues cv = new ContentValues();
-    cv.put( "_id", id );
-    cv.put( "timeStamp", timeStamp );
-    
+    if( null != id ) cv.put( "timeStamp", "datetime()" );
+
     for( Field f : ORMSupport.VIEW_MAP.get( this.getClass() ).keySet() ){
       if( Modifier.isTransient( f.getModifiers() ) ) continue;
       String n = f.getName();
@@ -253,7 +253,7 @@ public abstract class DomainClass implements Parcelable {
             cv.put( n, (boolean)v ? 1 : 0 );
             break;
         }
-      }catch( IllegalAccessException | IllegalArgumentException e ){}
+      }catch( IllegalAccessException | IllegalArgumentException ignored ){}
     }
     return cv;
   }
@@ -263,28 +263,6 @@ public abstract class DomainClass implements Parcelable {
     return "<" + getClass().getSimpleName() + ":" + id + ">";
   }
   
-  @Override
-  public void writeToParcel( Parcel dest, int flags ) {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ObjectOutputStream oos = null;
-    try{
-      oos = new ObjectOutputStream( baos );
-      oos.writeObject( this );
-      dest.writeByteArray( baos.toByteArray() );
-    }catch( IOException e ){
-    }finally{
-      try{
-        if( null != oos ) oos.close();
-        baos.close();
-      }catch( IOException e ){}
-    }
-  }
-  
-  @Override
-  public int describeContents() {
-    return 0;
-  }
-
   public static String now() {
     return NF.format( System.currentTimeMillis() / 1000 );
   }
